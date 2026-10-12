@@ -1,0 +1,1147 @@
+/* 基础计算训练系统 - 全局样式（移动优先，§24 响应式设计） */
+
+:root {
+  /* 护眼绿主题（低饱和、中低对比，长时间训练不易疲劳） */
+  --color-primary: #2f9e6b;
+  --color-primary-dark: #227a51;
+  --color-primary-soft: #e3f4e9;
+  --color-bg: #f2f6f2;
+  --color-surface: #ffffff;
+  --color-text: #17251c;
+  --color-muted: #5f7266;
+  --color-border: #dde7df;
+  --color-success: #1f8a4c;
+  --color-success-soft: #e0f5e6;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fbe6e3;
+  --color-warning: #d98324;
+  --color-warning-soft: #fdf1e0;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(23, 37, 28, 0.06);
+  --shadow: 0 6px 18px rgba(23, 37, 28, 0.08);
+  --space: 16px;
+  --nav-height: 60px;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  /* 移动端：避免长按弹出系统菜单、点击出现灰色高亮块 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ---------- 布局 ---------- */
+
+/*
+ * 应用外壳（移动端关键）：
+ * 整个应用正好一屏高（dvh，排除手机浏览器地址栏/底部工具栏），
+ * 底部导航作为普通流内元素排在最后，因此永远不会被浏览器工具栏挡住；
+ * 内容区 .app-main 自己滚动。
+ */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  /* JS 写入的实时可见高度优先（见 utils/viewport.ts），可避开手机浏览器地址栏/底部工具栏 */
+  height: var(--app-viewport-height, 100dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 防止滚动穿透到页面（训练中下拉刷新会打断训练） */
+  overscroll-behavior: contain;
+}
+
+.page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space);
+}
+
+.page-wide {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--space);
+}
+
+.page-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.page-subtitle {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  margin: 4px 0 0;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+/* ---------- 卡片 ---------- */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space);
+}
+
+.card + .card {
+  margin-top: 12px;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.card-subtitle {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.card-interactive {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  text-align: left;
+  display: block;
+  width: 100%;
+}
+
+.card-interactive:hover,
+.card-interactive:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  /* 移动端：去掉 300ms 双击缩放等待，并禁止连点误选中文字 */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.btn-outline {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.btn-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.btn-sm {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  min-height: 56px;
+  font-size: 1.125rem;
+  padding: 14px 24px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ---------- 表单 ---------- */
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 6px;
+}
+
+.field-hint {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  margin-top: 6px;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.input-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 38px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.chip.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- 统计 ---------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.stat-label {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value-sm {
+  font-size: 1.05rem;
+}
+
+/* ---------- 列表 ---------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.list-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.list-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.list-item-meta {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  margin-top: 4px;
+}
+
+.question-text {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* ---------- 标签 ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.badge-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.badge-warning {
+  background: var(--color-warning-soft);
+  color: #8a5514;
+}
+
+.badge-muted {
+  background: #e6ece7;
+  color: var(--color-muted);
+}
+
+.badge-lg {
+  font-size: 0.9375rem;
+  padding: 6px 16px;
+}
+
+/* ---------- 标签页 ---------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  min-height: 38px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* ---------- 工具类 ---------- */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.row-wrap {
+  flex-wrap: wrap;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.text-muted {
+  color: var(--color-muted);
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-warning {
+  color: #8a5514;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 14px 0;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-muted);
+  padding: 32px 16px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.alert {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+}
+
+.alert-danger {
+  background: var(--color-danger-soft);
+  color: #8f2d21;
+  border-color: #f3c9c2;
+}
+
+.alert-success {
+  background: var(--color-success-soft);
+  color: #14663a;
+  border-color: #b8e6c8;
+}
+
+.alert-info {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  border-color: #bfe3cd;
+}
+
+.alert-warning {
+  background: var(--color-warning-soft);
+  color: #8a5514;
+  border-color: #f1d9ac;
+}
+
+/* ---------- 导航（移动端在流内，永不被浏览器工具栏遮挡） ---------- */
+
+.nav {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 30;
+  display: flex;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.nav-link {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--nav-height);
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nav-link.active {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.nav-icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* ---------- 弹窗 ---------- */
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 37, 28, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow);
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
+
+/* ---------- 桌面端 ---------- */
+
+@media (min-width: 900px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 20px 14px;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    height: 100%;
+  }
+
+  .app-brand {
+    font-weight: 800;
+    font-size: 1.05rem;
+    padding: 0 10px 14px;
+  }
+
+  .app-main {
+    padding-bottom: 0;
+  }
+
+  .nav {
+    position: static;
+    flex-direction: column;
+    border-top: none;
+    border-right: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .nav-link {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+  }
+
+  .nav-link.active {
+    background: var(--color-primary-soft);
+  }
+
+  .nav-icon {
+    font-size: 1rem;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 899px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* 移动端把次级控件的触控目标放大到 ≥40px，避免点不准 */
+  .btn-sm {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+
+  .chip {
+    min-height: 42px;
+  }
+
+  .tab {
+    min-height: 42px;
+  }
+
+  .nav-link {
+    min-height: 56px;
+  }
+}
+
+/* ---------- 训练页面（专注模式，§8） ---------- */
+
+/*
+ * 三段式固定布局（题目永远看得见）：
+ *   1. .training-head   固定不动：进度、题目、答案填空线、参数与用时
+ *   2. .training-extras 中间弹性区：反馈 / 提示 / 状态，空间不足时只有它内部滚动
+ *   3. .training-keypad 固定在可见区域底部
+ * 整页不滚动（.app-shell 固定一屏高，训练页 height:100% + overflow:hidden），
+ * 因此往下滑动时题目不会被推走。
+ *
+ * 高度依次使用：--app-viewport-height（visualViewport 实时值）→ 100dvh → 100vh，
+ * 以避开手机浏览器地址栏 / 底部工具栏的遮挡。
+ */
+.training-screen {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  text-align: center;
+}
+
+.training-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.training-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.training-extras {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.training-keypad {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.answer-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.training-question {
+  font-family: var(--font-mono);
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  margin: 2px 0 0;
+}
+
+/* 答案填空线：视觉上像“在题目下面填写答案” */
+.answer-line {
+  width: min(420px, 80vw);
+  min-height: 56px;
+  padding: 2px 8px;
+  border: none;
+  border-bottom: 3px solid var(--color-primary);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+
+.answer-line:focus {
+  border-bottom-color: var(--color-primary-dark);
+  box-shadow: 0 6px 12px -10px var(--color-primary);
+}
+
+.answer-line:disabled {
+  opacity: 0.6;
+}
+
+.answer-line::placeholder {
+  color: var(--color-border);
+  font-weight: 400;
+}
+
+/* 参数 / 用时 / 等级速查合并成一行，尽量少占高度 */
+.training-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 14px;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.training-legend {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.training-legend-item {
+  margin-left: 8px;
+}
+
+/* 屏幕较矮时（横屏、小屏手机）自动收紧，保证题目与键盘同屏 */
+@media (max-height: 780px) {
+  .training-panel {
+    gap: 8px;
+    padding: 10px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .training-question {
+    font-size: clamp(1.35rem, 6vw, 2rem);
+  }
+
+  .answer-line {
+    min-height: 48px;
+    font-size: 1.75rem;
+  }
+
+  .training-meta {
+    font-size: 0.75rem;
+  }
+}
+
+/* 更矮的屏幕：隐藏非关键信息行，只保留题目、答案、用时与键盘 */
+@media (max-height: 680px) {
+  .training-legend {
+    display: none;
+  }
+
+  .training-keypad-hint {
+    display: none;
+  }
+
+  .training-question {
+    margin: 0;
+  }
+}
+
+/* 横屏 / 极矮屏幕的键盘排布见文件下方「极矮屏幕」区块（需晚于键盘基础样式） */
+
+
+/* ---------- 应用自带数字键盘（训练页面，大按键便于单手操作） ---------- */
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: min(460px, 96vw);
+}
+
+.keypad-key {
+  min-height: 68px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  /* 移动端：避免双击缩放等待、连点选中文字、长按弹出菜单 */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.keypad-key:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.keypad-key:active:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+.keypad-key:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.keypad-key-fn {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.keypad-key-submit {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+}
+
+.keypad-key-submit:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.keypad-key-submit:active:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+/* 屏幕较矮时（横屏、小屏手机）自动收紧，保证键盘完整可见 */
+@media (max-height: 780px) {
+  .keypad {
+    gap: 8px;
+  }
+
+  .keypad-key {
+    min-height: 56px;
+    font-size: 1.6rem;
+  }
+
+  .keypad-key-fn {
+    font-size: 1rem;
+  }
+
+  .keypad-key-submit {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-height: 660px) {
+  .keypad-key {
+    min-height: 48px;
+    font-size: 1.4rem;
+  }
+
+  .keypad-key-fn {
+    font-size: 0.95rem;
+  }
+
+  .keypad-key-submit {
+    font-size: 1rem;
+  }
+}
+
+/*
+ * 横屏 / 极矮屏幕（例如 844x330）：
+ * 键盘由 3 列 5 行改为 5 列 3 行，总高度从约 270px 降到约 150px，
+ * 确保题目、答案与键盘能同屏显示（真实浏览器实测过，见 .tools/mobile-check.mjs）。
+ */
+@media (max-height: 560px) {
+  .training-panel {
+    gap: 6px;
+    padding: 8px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .training-question {
+    font-size: 1.35rem;
+  }
+
+  .answer-line {
+    min-height: 40px;
+    font-size: 1.4rem;
+  }
+
+  .keypad {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    width: min(760px, 96vw);
+  }
+
+  .keypad-key {
+    min-height: 44px;
+    font-size: 1.15rem;
+    border-radius: 10px;
+  }
+
+  .keypad-key-fn {
+    font-size: 0.8rem;
+  }
+
+  .keypad-key-submit {
+    font-size: 0.9rem;
+    letter-spacing: 0;
+  }
+
+  /* 横屏时反馈面板加宽，让「你的答案 / 正确答案 / 误差」保持一行 */
+  .feedback-panel {
+    width: min(760px, 96vw);
+    padding: 8px 10px;
+  }
+
+  .feedback-detail {
+    font-size: 0.8125rem;
+  }
+
+  .training-continue {
+    width: min(760px, 96vw);
+    min-height: 52px;
+  }
+}
+
+/* 答错反馈：详情一行显示，尽量少占高度，避免矮屏手机上被键盘挤到需要滚动 */
+.feedback-detail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 14px;
+}
+
+/* 反馈状态下的「继续」大按钮（占据原数字键盘位置，触控目标充足） */
+.training-continue {
+  width: min(460px, 96vw);
+  min-height: 64px;
+}
+
+.training-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  color: var(--color-muted);
+}
+
+.training-progress {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.feedback-panel {
+  width: min(420px, 92vw);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.feedback-wrong {
+  background: var(--color-danger-soft);
+  border: 1px solid #f3c9c2;
+}
+
+.feedback-correct {
+  background: var(--color-success-soft);
+  border: 1px solid #b8e6c8;
+}
+
+/* ---------- 结算页面（§11） ---------- */
+
+.grade-hero {
+  text-align: center;
+  padding: 22px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.grade-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.grade-excellent {
+  color: var(--color-success);
+}
+
+.grade-good {
+  color: var(--color-primary);
+}
+
+.grade-pass {
+  color: var(--color-warning);
+}
+
+.grade-encourage {
+  color: var(--color-danger);
+}

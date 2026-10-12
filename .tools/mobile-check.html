@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>mobile-check harness</title>
+  </head>
+  <body style="margin: 0; font: 13px/1.5 monospace">
+    <pre id="report">running…</pre>
+    <iframe id="frame" style="border: 0; background: #fff"></iframe>
+    <script>
+      /*
+       * 手机端布局自检页（仅开发/测试用，不参与构建产物）。
+       *
+       * 用法：/\.tools/mobile-check.html?w=390&h=844&label=iphone14
+       * 流程：加载应用 → 点击「开始练习」→ 进入训练页 → 读取真实布局数值 →
+       *       把 JSON 写入 %%REPORT_START%%…%%REPORT_END%%，由 .tools/mobile-check.mjs 校验。
+       *
+       * 借助真实浏览器引擎（Edge/Chrome 的 headless）获得真实排版结果，
+       * 因此可以验证「键盘是否被切掉」「题目是否被推走」「触控目标是否够大」等手机端问题。
+       */
+      const params = new URLSearchParams(location.search)
+      const width = Number(params.get('w') || 390)
+      const height = Number(params.get('h') || 844)
+      const label = params.get('label') || `${width}x${height}`
+      const appUrl = params.get('url') || './#/'
+      const reportUrl = params.get('report') || ''
+
+      const frame = document.getElementById('frame')
+      frame.width = width
+      frame.height = height
+      frame.style.width = `${width}px`
+      frame.style.height = `${height}px`
+
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+      async function waitFor(fn, timeout = 12000) {
+        const start = Date.now()
+        for (;;) {
+          try {
+            const value = fn()
+            if (value) return value
+          } catch (error) {
+            /* iframe 尚未可访问，继续等待 */
+          }
+          if (Date.now() - start > timeout) return null
+          await sleep(80)
+        }
+      }
+
+      function rect(el) {
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return {
+          top: +r.top.toFixed(1),
+          bottom: +r.bottom.toFixed(1),
+          left: +r.left.toFixed(1),
+          right: +r.right.toFixed(1),
+          width: +r.width.toFixed(1),
+          height: +r.height.toFixed(1)
+        }
+      }
+
+      function findByText(doc, selector, text) {
+        return [...doc.querySelectorAll(selector)].find((el) =>
+          (el.textContent || '').trim().includes(text)
+        )
+      }
+
+      ;(async () => {
+        const report = { label, width, height, steps: [], errors: [] }
+        try {
+          frame.src = appUrl
+          const doc = () => frame.contentDocument
+
+          const startButton = await waitFor(() => findByText(doc(), 'button', '开始练习'))
+          if (!startButton) throw new Error('未找到首页「开始练习」按钮')
+          report.steps.push('home-loaded')
+          startButton.click()
+
+          const question = await waitFor(() => doc().querySelector('.training-question'))
+          if (!question) throw new Error('训练页未渲染出题目')
+          report.steps.push('training-loaded')
+          await sleep(300)
+
+          const d = doc()
+          const win = frame.contentWindow
+          const visual = win.visualViewport
+
+          report.viewport = {
+            innerWidth: win.innerWidth,
+            innerHeight: win.innerHeight,
+            visualHeight: visual ? +visual.height.toFixed(1) : null,
+            cssVar: getComputedStyle(d.documentElement)
+              .getPropertyValue('--app-viewport-height')
+              .trim(),
+            scrollWidth: d.documentElement.scrollWidth,
+            clientWidth: d.documentElement.clientWidth,
+            scrollHeight: d.documentElement.scrollHeight,
+            clientHeight: d.documentElement.clientHeight
+          }
+
+          const mainEl = d.querySelector('.app-main')
+          report.appMain = mainEl
+            ? { clientHeight: mainEl.clientHeight, scrollHeight: mainEl.scrollHeight }
+            : null
+
+          report.rects = {
+            screen: rect(d.querySelector('.training-screen')),
+            head: rect(d.querySelector('.training-head')),
+            progress: rect(d.querySelector('.training-progress')),
+            question: rect(question),
+            answer: rect(d.querySelector('.answer-line')),
+            meta: rect(d.querySelector('.training-meta')),
+            legend: rect(d.querySelector('.training-legend')),
+            extras: rect(d.querySelector('.training-extras')),
+            keypadZone: rect(d.querySelector('.training-keypad')),
+            keypad: rect(d.querySelector('.keypad')),
+            submitKey: rect(findByText(d, '.keypad-key', '确认')),
+            backdropKey: rect(findByText(d, '.keypad-key', '退格')),
+            endButton: rect(findByText(d, 'button', '结束训练'))
+          }
+
+          report.keys = [...d.querySelectorAll('.keypad-key')].map((el) => ({
+            label: (el.textContent || '').trim(),
+            ...rect(el)
+          }))
+
+          // 点一下数字键，确认底部键盘在手机上真的能输入
+          const one = findByText(d, '.keypad-key', '1')
+          if (one) one.click()
+          await sleep(120)
+          const answerEl = d.querySelector('.answer-line')
+          report.answerAfterTap = answerEl ? answerEl.value : null
+          report.activeElementTag = (d.activeElement && d.activeElement.className) || ''
+          report.steps.push('measured')
+
+          // 提交一个必定错误的答案 → 检查「答错反馈」出现时键盘是否仍完整可见
+          const confirm = findByText(d, '.keypad-key', '确认')
+          if (confirm) confirm.click()
+          const panel = await waitFor(() => doc().querySelector('.feedback-panel'), 6000)
+          await sleep(200)
+          const continueBtn = findByText(doc(), 'button', '继续')
+          report.afterWrong = {
+            feedbackShown: Boolean(panel),
+            feedback: rect(panel),
+            continueButton: rect(continueBtn),
+            question: rect(doc().querySelector('.training-question')),
+            keypad: rect(doc().querySelector('.keypad')),
+            keypadZone: rect(doc().querySelector('.training-keypad')),
+            extras: (() => {
+              const el = doc().querySelector('.training-extras')
+              if (!el) return null
+              return {
+                ...rect(el),
+                scrollHeight: el.scrollHeight,
+                clientHeight: el.clientHeight
+              }
+            })(),
+            endButton: rect(findByText(doc(), 'button', '结束训练'))
+          }
+          report.steps.push('wrong-answer-checked')
+
+          // 点「继续」回到输入状态
+          if (continueBtn) continueBtn.click()
+          await sleep(200)
+          report.afterContinue = {
+            feedbackShown: Boolean(doc().querySelector('.feedback-panel')),
+            question: rect(doc().querySelector('.training-question')),
+            keypad: rect(doc().querySelector('.keypad'))
+          }
+          report.steps.push('continued')
+
+          // 结束本组训练，改为巡检其它页面（训练中路由会拦截跳转）
+          const endButton = findByText(doc(), 'button', '结束训练')
+          if (endButton) {
+            endButton.click()
+            await waitFor(() => doc().querySelector('.grade-hero, .empty'), 8000)
+            report.steps.push('training-finished')
+          }
+
+          // 逐页巡检：横向溢出 + 触控目标尺寸
+          const pages = [
+            { name: 'home', hash: '#/', waitFor: '.page-title' },
+            { name: 'setup', hash: '#/five-divide-three', waitFor: '.page-title' },
+            { name: 'wrong', hash: '#/wrong', waitFor: '.page-title' },
+            { name: 'history', hash: '#/history', waitFor: '.page-title' },
+            { name: 'weak', hash: '#/weak', waitFor: '.page-title' },
+            { name: 'settings', hash: '#/settings', waitFor: '.page-title' }
+          ]
+          report.pages = []
+          for (const page of pages) {
+            doc().defaultView.location.hash = page.hash
+            await waitFor(() => doc().querySelector(page.waitFor), 8000)
+            await sleep(350)
+            const pageDoc = doc()
+            const win2 = frame.contentWindow
+            const targets = [
+              ...pageDoc.querySelectorAll('button, .chip, .tab, .keypad-key')
+            ]
+              .filter((el) => {
+                const style = win2.getComputedStyle(el)
+                const box = el.getBoundingClientRect()
+                return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0
+              })
+              .map((el) => {
+                const box = rect(el)
+                return {
+                  label: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 12),
+                  width: box.width,
+                  height: box.height
+                }
+              })
+            const overflowing = [...pageDoc.querySelectorAll('body *')]
+              .filter((el) => el.getBoundingClientRect().right > win2.innerWidth + 1)
+              .map((el) => `${el.tagName.toLowerCase()}.${(el.className || '').toString().slice(0, 24)}`)
+            report.pages.push({
+              name: page.name,
+              scrollWidth: pageDoc.documentElement.scrollWidth,
+              clientWidth: pageDoc.documentElement.clientWidth,
+              targets,
+              overflowing: overflowing.slice(0, 5)
+            })
+          }
+          report.steps.push('pages-audited')
+        } catch (error) {
+          report.errors.push(String((error && error.message) || error))
+        }
+
+        const json = JSON.stringify(report)
+        document.getElementById('report').textContent =
+          '%%REPORT_START%%' + json + '%%REPORT_END%%'
+
+        // 主动把结果回传给本地检查脚本（无头浏览器下 --dump-dom 的时机不可靠）
+        if (reportUrl) {
+          try {
+            await fetch(reportUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: json
+            })
+          } catch (error) {
+            document.title = 'report-send-failed'
+          }
+        }
+      })()
+    </script>
+  </body>
+</html>

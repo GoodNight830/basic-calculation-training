@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="基础计算训练系统">
+  <rect width="512" height="512" rx="96" fill="#2f9e6b" />
+  <text
+    x="256"
+    y="220"
+    text-anchor="middle"
+    font-family="Segoe UI, Helvetica, Arial, sans-serif"
+    font-size="160"
+    font-weight="700"
+    fill="#ffffff"
+  >
+    5÷3
+  </text>
+  <text
+    x="256"
+    y="340"
+    text-anchor="middle"
+    font-family="Segoe UI, Helvetica, Arial, sans-serif"
+    font-size="64"
+    fill="#e3f4e9"
+  >
+    计算训练
+  </text>
+</svg>
