@@ -171,12 +171,24 @@ export async function loadDataCounts(): Promise<{
   return { sessions, questions, wrongQuestions, weakPatterns: weakPatterns.length }
 }
 
-export async function loadDiagnosis(module: string = MODULE_FIVE_DIVIDE_THREE): Promise<{ diagnosis: LocalDiagnosis; latestAi: AiAnalysisSnapshot | null }> {
-  const [analysis, latestAi] = await Promise.all([loadSessionAnalysisData(module), aiSnapshotsRepo.latestAiAnalysis(module)])
+export interface DiagnosisBundle {
+  diagnosis: LocalDiagnosis
+  latestAi: AiAnalysisSnapshot | null
+  /** 该模块的全部 AI 报告快照，按时间倒序（用于历史对比） */
+  aiHistory: AiAnalysisSnapshot[]
+}
+
+export async function loadDiagnosis(module: string = MODULE_FIVE_DIVIDE_THREE): Promise<DiagnosisBundle> {
+  const [analysis, aiHistory] = await Promise.all([
+    loadSessionAnalysisData(module),
+    aiSnapshotsRepo.listAiAnalyses(module)
+  ])
+  const latestAi = aiHistory[0] ?? null
   return {
     diagnosis: buildLocalDiagnosis(analysis.records, module, {
       lastAiQuestionCount: latestAi?.questionCount ?? 0
     }),
-    latestAi
+    latestAi,
+    aiHistory
   }
 }
