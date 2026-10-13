@@ -1,4 +1,4 @@
-/** 路由配置（§4 信息架构） */
+/** 路由配置（§4 信息架构 · v2 三级结构：分类首页 → 基础计算 → 训练） */
 
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { MODULE_FIVE_DIVIDE_THREE } from '@/config/trainingConfig'
@@ -26,10 +26,22 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '首页', nav: true, navOrder: 1, icon: '🏠', label: '首页' }
   },
   {
+    path: '/basic',
+    name: 'basic',
+    component: () => import('@/pages/BasicCalc.vue'),
+    meta: { title: '基础计算' }
+  },
+  {
+    path: '/coming-soon',
+    name: 'coming-soon',
+    component: () => import('@/pages/ComingSoon.vue'),
+    meta: { title: '敬请期待' }
+  },
+  {
     path: '/five-divide-three',
     name: 'five-divide-three',
     component: () => import('@/pages/FiveDivideThreeSetup.vue'),
-    meta: { title: '五除三', nav: true, navOrder: 2, icon: '➗', label: '五除三' }
+    meta: { title: '五位数÷三位数' }
   },
   {
     path: '/training',
@@ -48,31 +60,31 @@ const routes: RouteRecordRaw[] = [
     path: '/wrong',
     name: 'wrong',
     component: () => import('@/pages/WrongQuestions.vue'),
-    meta: { title: '错题', nav: true, navOrder: 3, icon: '📕', label: '错题' }
+    meta: { title: '错题' }
   },
   {
     path: '/history',
     name: 'history',
     component: () => import('@/pages/History.vue'),
-    meta: { title: '训练记录', nav: true, navOrder: 4, icon: '📈', label: '记录' }
+    meta: { title: '训练记录' }
   },
   {
     path: '/weak',
     name: 'weak',
     component: () => import('@/pages/WeakPatterns.vue'),
-    meta: { title: '薄弱点', nav: true, navOrder: 5, icon: '🎯', label: '薄弱点' }
+    meta: { title: '薄弱点' }
   },
   {
     path: '/diagnosis',
     name: 'diagnosis',
     component: () => import('@/pages/Diagnosis.vue'),
-    meta: { title: '能力诊断', nav: true, navOrder: 5, icon: '◉', label: '诊断' }
+    meta: { title: '能力诊断' }
   },
   {
     path: '/settings',
     name: 'settings',
     component: () => import('@/pages/Settings.vue'),
-    meta: { title: '设置', nav: true, navOrder: 7, icon: '⚙️', label: '设置' }
+    meta: { title: '我的', nav: true, navOrder: 2, icon: '👤', label: '我的' }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -91,8 +103,8 @@ export const navigationRoutes = routes
     navOrder: route.meta?.navOrder ?? 99
   }))
 
-/** 移动端底部导航只放 5 项，薄弱点通过首页/记录进入 */
-export const mobileNavigation = navigationRoutes.filter((item) => item.name !== 'weak' && item.name !== 'history')
+/** 移动端底部导航与桌面侧栏一致：首页 + 我的 */
+export const mobileNavigation = navigationRoutes
 
 export const router = createRouter({
   history: createWebHashHistory(),
