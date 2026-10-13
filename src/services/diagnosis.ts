@@ -48,24 +48,39 @@ function hashText(text: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function errorPatterns(records: readonly QuestionRecord[]): ErrorPatternCount[] {
-  const counts = new Map<ErrorPatternCount['type'], number>()
-  const add = (type: ErrorPatternCount['type']) => counts.set(type, (counts.get(type) ?? 0) + 1)
-  const slowThreshold = percentile(records.map((r) => r.elapsedMs), 0.75) ?? Infinity
+function errorPatterns(records: readonly QuestionRecord[], nowMs: number, slowThreshold: number): ErrorPatternCount[] {
+  const matches = new Map<ErrorPatternCount['type'], QuestionRecord[]>()
+  const add = (type: ErrorPatternCount['type'], record: QuestionRecord) => {
+    const list = matches.get(type) ?? []
+    list.push(record)
+    matches.set(type, list)
+  }
   const wrongKeys = new Map<string, number>()
   for (const record of records) {
-    if (record.rawAnswer.trim() === '') add('empty')
-    else if (record.userAnswer === null) add('invalid')
-    else if (!record.correct && record.userAnswer > record.correctAnswer) add('answer_too_large')
-    else if (!record.correct && record.userAnswer < record.correctAnswer) add('answer_too_small')
-    if (record.elapsedMs > slowThreshold) add(record.correct ? 'slow_correct' : 'slow_wrong')
+    if (record.rawAnswer.trim() === '') add('empty', record)
+    else if (record.userAnswer === null) add('invalid', record)
+    else if (!record.correct && record.userAnswer > record.correctAnswer) add('answer_too_large', record)
+    else if (!record.correct && record.userAnswer < record.correctAnswer) add('answer_too_small', record)
+    if (record.elapsedMs > slowThreshold) add(record.correct ? 'slow_correct' : 'slow_wrong', record)
     if (!record.correct) {
       const key = `${record.dividend}:${record.divisor}`
       wrongKeys.set(key, (wrongKeys.get(key) ?? 0) + 1)
     }
   }
-  for (const count of wrongKeys.values()) if (count > 1) counts.set('repeat_wrong', (counts.get('repeat_wrong') ?? 0) + count)
-  return [...counts.entries()].map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count)
+  const repeatedRecords = records.filter((record) => (wrongKeys.get(`${record.dividend}:${record.divisor}`) ?? 0) > 1 && !record.correct)
+  if (repeatedRecords.length) matches.set('repeat_wrong', repeatedRecords)
+  return [...matches.entries()].map(([type, matched]) => {
+    const divisorCounts = new Map<number, number>()
+    for (const record of matched) divisorCounts.set(record.divisor, (divisorCounts.get(record.divisor) ?? 0) + 1)
+    return {
+      type,
+      count: matched.length,
+      rate: records.length ? round(matched.length / records.length * 100) : 0,
+      recent7Count: since(matched, nowMs - 7 * DAY).length,
+      recent30Count: since(matched, nowMs - 30 * DAY).length,
+      topDivisors: [...divisorCounts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).slice(0, 5).map(([divisor]) => divisor)
+    }
+  }).sort((a, b) => b.count - a.count)
 }
 
 export function buildLocalDiagnosis(
@@ -80,6 +95,7 @@ export function buildLocalDiagnosis(
   const previous7Records = since(scoped, nowMs - 14 * DAY, nowMs - 7 * DAY)
   const recent30Records = since(scoped, nowMs - 30 * DAY)
   const rangeSize = options.rangeSize ?? 100
+  const slowThreshold = percentile(scoped.map((r) => r.elapsedMs), 0.75) ?? Infinity
   const ranges = new Map<number, QuestionRecord[]>()
   for (const record of scoped) {
     const range = divisorRangeOf(record.divisor, rangeSize)
@@ -100,7 +116,8 @@ export function buildLocalDiagnosis(
       recent7,
       previous7,
       trend,
-      confidence: confidenceOf(recent7.sampleCount)
+      confidence: confidenceOf(recent7.sampleCount),
+      errorPatterns: errorPatterns(all, nowMs, slowThreshold)
     }
   }).sort((a, b) => {
     const priority = { worsening: 3, stable: 2, improving: 1, insufficient_data: 0 }
@@ -110,7 +127,7 @@ export function buildLocalDiagnosis(
     count: scoped.length,
     lifetime: windowOf(scoped),
     recent7: windowOf(recent7Records),
-    ranges: rangeRows.map((r) => [r.rangeMin, r.lifetime.sampleCount, r.lifetime.errorCount, r.recent7.sampleCount, r.recent7.errorCount])
+    ranges: rangeRows.map((r) => [r.rangeMin, r.lifetime.sampleCount, r.lifetime.errorCount, r.recent7.sampleCount, r.recent7.errorCount, r.errorPatterns])
   })
   return {
     schemaVersion: 1,
@@ -121,7 +138,7 @@ export function buildLocalDiagnosis(
     recent7: windowOf(recent7Records),
     previous7: windowOf(previous7Records),
     ranges: rangeRows,
-    errorPatterns: errorPatterns(scoped),
+    errorPatterns: errorPatterns(scoped, nowMs, slowThreshold),
     questionCountSinceLastAi: Math.max(0, scoped.length - (options.lastAiQuestionCount ?? 0)),
     dataHash: hashText(hashSource)
   }

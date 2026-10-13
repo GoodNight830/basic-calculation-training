@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildLocalDiagnosis } from '@/services/diagnosis'
-import { formatAiReportText, validateAiReport } from '@/services/aiAnalysis'
+import { formatAiReportText, requestAiReport, validateAiReport } from '@/services/aiAnalysis'
 import type { QuestionRecord } from '@/types'
+import { normalizeSettings } from '@/db/settings'
+import { DEFAULT_APP_SETTINGS } from '@/config/trainingConfig'
+
+afterEach(() => vi.unstubAllGlobals())
 
 function record(index: number, divisor: number, correct: boolean, daysAgo: number, now: Date): QuestionRecord {
   const createdAt = new Date(now.getTime() - daysAgo * 86_400_000).toISOString()
@@ -34,9 +38,54 @@ describe('local diagnosis', () => {
     expect(result.ranges[0]?.trend).toBe('insufficient_data')
     expect(result.ranges[0]?.confidence).toBe('insufficient')
   })
+
+  it('cross-tabulates error types by divisor range', () => {
+    const now = new Date('2026-09-27T12:00:00.000Z')
+    const records = [
+      record(1, 210, false, 1, now), record(2, 220, false, 2, now), record(3, 220, false, 3, now),
+      record(4, 430, false, 1, now), record(5, 440, true, 1, now)
+    ]
+    const result = buildLocalDiagnosis(records, 'five-divide-three', { now })
+    const range200 = result.ranges.find((range) => range.rangeMin === 200)
+    const range400 = result.ranges.find((range) => range.rangeMin === 400)
+    const large200 = range200?.errorPatterns.find((pattern) => pattern.type === 'answer_too_large')
+    const large400 = range400?.errorPatterns.find((pattern) => pattern.type === 'answer_too_large')
+    expect(large200).toMatchObject({ count: 3, recent7Count: 3, recent30Count: 3, topDivisors: [220, 210] })
+    expect(large200?.rate).toBe(100)
+    expect(large400?.count).toBe(1)
+  })
 })
 
 describe('AI report validation', () => {
+  it('retries once with a larger output budget when JSON is truncated', async () => {
+    const diagnosis = buildLocalDiagnosis([], 'five-divide-three', { now: new Date('2026-09-27T12:00:00.000Z') })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ finish_reason: 'length', message: { content: '{"summary":"未完成"' } }]
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ summary: '数据有限', findings: [], nextPlan: [], uncertainty: [] }) } }]
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const report = await requestAiReport({
+      ...DEFAULT_APP_SETTINGS.ai,
+      enabled: true,
+      baseUrl: 'https://example.com/v1',
+      model: 'test-model',
+      apiKey: 'test-key',
+      wireApi: 'chat_completions',
+      transport: 'direct',
+      consentToUpload: true,
+      maxOutputTokens: 1000
+    }, diagnosis)
+
+    expect(report.summary).toBe('数据有限')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const retryBody = JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body)) as { max_tokens: number }
+    expect(retryBody.max_tokens).toBe(2000)
+  })
+
   it('localizes internal analysis terms for display', () => {
     const internalTerms = 'empty invalid answer_too_large answer_too_small slow_correct slow_wrong repeat_wrong recent30 recent7 previous7 lifetime sampleCount errorCount errorRate medianElapsedMs p75ElapsedMs questionCountSinceLastAi errorPatterns rangeMin rangeMax ranges accuracy count trend confidence insufficient insufficient_data strength weakness low medium high schemaVersion generatedAt dataHash module improving worsening stable'
     const localized = formatAiReportText(internalTerms)
@@ -54,15 +103,45 @@ describe('AI report validation', () => {
     expect(report.summary).toBe('你可能表现较好')
     expect(report.uncertainty).toContain('系统已将缺少数据依据的绝对化或恭维措辞改为中性表述。')
   })
-  it('rejects confident claims when local samples are insufficient', () => {
+  it('downgrades confident claims to insufficient_data when local samples are insufficient', () => {
     const now = new Date('2026-09-27T12:00:00.000Z')
     const diagnosis = buildLocalDiagnosis([record(1, 434, false, 1, now)], 'five-divide-three', { now })
-    expect(() => validateAiReport({
+    const report = validateAiReport({
       summary: '存在问题', uncertainty: [], nextPlan: [], findings: [{
         type: 'weakness', title: '范围较弱', evidence: '出现错误', sampleCount: 1,
         confidence: 'high', limitation: '样本有限', rangeMin: 400, rangeMax: 499
       }]
-    }, diagnosis)).toThrow('样本不足')
+    }, diagnosis)
+    expect(report.findings[0]?.type).toBe('insufficient_data')
+    expect(report.findings[0]?.confidence).toBe('low')
+    expect(report.uncertainty).toContain('系统已按样本量规则校正了部分发现项的可信度或结论类型。')
+  })
+
+  it('corrects a mismatched sample count to local statistics instead of failing', () => {
+    const now = new Date('2026-09-27T12:00:00.000Z')
+    // 本地只有 1 个样本，但模型填了 30（长期口径）
+    const diagnosis = buildLocalDiagnosis([record(1, 434, false, 1, now)], 'five-divide-three', { now })
+    const report = validateAiReport({
+      summary: '存在问题', uncertainty: [], nextPlan: [], findings: [{
+        type: 'weakness', title: '范围较弱', evidence: '出现错误', sampleCount: 30,
+        confidence: 'high', limitation: '样本有限', rangeMin: 400, rangeMax: 499
+      }]
+    }, diagnosis)
+    expect(report.findings[0]?.sampleCount).toBe(1)
+    expect(report.uncertainty).toContain('系统已按本地统计校正了部分发现项引用的样本量。')
+  })
+
+  it('corrects an invalid finding type to a valid enum instead of failing', () => {
+    const now = new Date('2026-09-27T12:00:00.000Z')
+    const diagnosis = buildLocalDiagnosis([record(1, 434, false, 1, now)], 'five-divide-three', { now })
+    const report = validateAiReport({
+      summary: '存在问题', uncertainty: [], nextPlan: [], findings: [{
+        type: '薄弱', title: '范围较弱', evidence: '出现错误', sampleCount: 1,
+        confidence: 'high', limitation: '样本有限', rangeMin: 400, rangeMax: 499
+      }]
+    }, diagnosis)
+    expect(report.findings[0]?.type).toBe('weakness')
+    expect(report.uncertainty).toContain('系统已纠正了部分发现项的类型标注。')
   })
 
   it('neutralizes unsupported flattery and absolute language', () => {
@@ -81,5 +160,22 @@ describe('AI report validation', () => {
     }, diagnosis)
     expect(report.nextPlan).toEqual([])
     expect(report.uncertainty).toContain('系统已移除无法由本地统计验证的范围或训练比例。')
+  })
+})
+
+describe('AI provider settings', () => {
+  it('forces the DeepSeek official endpoint to Chat Completions', () => {
+    const settings = normalizeSettings({
+      ...DEFAULT_APP_SETTINGS,
+      ai: {
+        ...DEFAULT_APP_SETTINGS.ai,
+        provider: 'DeepSeek',
+        baseUrl: 'https://api.deepseek.com/v1/',
+        model: 'deepseek-chat',
+        wireApi: 'responses'
+      }
+    })
+    expect(settings.ai.baseUrl).toBe('https://api.deepseek.com/v1')
+    expect(settings.ai.wireApi).toBe('chat_completions')
   })
 })

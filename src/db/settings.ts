@@ -57,6 +57,7 @@ export function normalizeSettings(input: Partial<AppSettings> | null | undefined
   const aiRaw = raw.ai ?? DEFAULT_AI_SETTINGS
   const normalizedAiBaseUrl = normalizeBaseUrl(String(aiRaw.baseUrl ?? DEFAULT_AI_SETTINGS.baseUrl))
   const knownResponsesProvider = /(^|\.)fastaitoken\.com$/i.test(safeHostname(normalizedAiBaseUrl))
+  const knownChatProvider = /(^|\.)deepseek\.com$/i.test(safeHostname(normalizedAiBaseUrl))
   const autoOptions: AiAutoAnalysis[] = ['off', 'daily', 'weekly', 'after_30_questions']
   const detailOptions: AiReportDetail[] = ['short', 'standard', 'detailed']
   const goalOptions: LearningGoal[] = ['accuracy', 'speed', 'exam', 'maintenance']
@@ -85,7 +86,7 @@ export function normalizeSettings(input: Partial<AppSettings> | null | undefined
       baseUrl: normalizedAiBaseUrl,
       apiKey: String(aiRaw.apiKey ?? '').trim(),
       model: String(aiRaw.model ?? '').trim().slice(0, 200),
-      wireApi: knownResponsesProvider || aiRaw.wireApi === 'responses' ? 'responses' : 'chat_completions',
+      wireApi: knownResponsesProvider ? 'responses' : knownChatProvider ? 'chat_completions' : aiRaw.wireApi === 'responses' ? 'responses' : 'chat_completions',
       transport: aiRaw.transport === 'direct' ? 'direct' : 'local_proxy',
       reasoningEffort: ['low', 'medium', 'high'].includes(String(aiRaw.reasoningEffort))
         ? aiRaw.reasoningEffort as 'low' | 'medium' | 'high'

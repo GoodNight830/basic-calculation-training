@@ -272,7 +272,8 @@ for (const device of DEVICES) {
   let stderr = ''
   const url =
     `${BASE}/.tools/mobile-check.html?w=${device.w}&h=${device.h}` +
-    `&label=${encodeURIComponent(device.label)}&report=${encodeURIComponent(server.url)}`
+    `&label=${encodeURIComponent(device.label)}&report=${encodeURIComponent(server.url)}` +
+    `&url=${encodeURIComponent(`${BASE}/?hostSync=off#/`)}`
   const child = runBrowser(browser, url, (text) => {
     stderr += text
   })

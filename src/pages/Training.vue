@@ -30,6 +30,7 @@ const answerInput = ref<InstanceType<typeof AnswerInput> | null>(null)
 const showAbandonDialog = ref(false)
 const submitting = ref(false)
 const briefCorrect = ref(false)
+const restartNotice = ref(false)
 
 const { pressKey, backspace, clear } = useAnswerInput(answer)
 
@@ -63,6 +64,7 @@ const questionTimerLabel = computed(() => formatMs(trainingStore.liveElapsedMs))
 const totalTimerLabel = computed(() => formatDuration(trainingStore.totalElapsedMs))
 
 let autoContinueHandle: ReturnType<typeof setTimeout> | null = null
+let restartNoticeHandle: ReturnType<typeof setTimeout> | null = null
 
 function clearAutoContinue(): void {
   if (autoContinueHandle !== null) {
@@ -124,6 +126,12 @@ async function restartQuestion(): Promise<void> {
   briefCorrect.value = false
   answer.value = ''
   trainingStore.restartQuestion()
+  restartNotice.value = true
+  if (restartNoticeHandle !== null) clearTimeout(restartNoticeHandle)
+  restartNoticeHandle = setTimeout(() => {
+    restartNotice.value = false
+    restartNoticeHandle = null
+  }, 900)
   await focusInput()
 }
 
@@ -178,6 +186,7 @@ onBeforeUnmount(() => {
   clearAutoContinue()
   window.removeEventListener('keydown', onKeydown)
   trainingStore.stopTimer()
+  if (restartNoticeHandle !== null) clearTimeout(restartNoticeHandle)
 })
 
 /** 训练过程中不能切换模式或离开（§6.8） */
@@ -239,6 +248,10 @@ onBeforeRouteLeave(() => {
 
         <div v-if="briefCorrect" class="feedback-panel feedback-correct" style="width: auto; padding: 14px 24px">
           <span class="bold text-success" style="font-size: 1.35rem">✓ 正确</span>
+        </div>
+
+        <div v-else-if="restartNotice" class="training-restart-notice" role="status" aria-live="polite">
+          本题已重开，计时已归零
         </div>
 
         <FeedbackPanel

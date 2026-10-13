@@ -18,6 +18,8 @@
  * 大触摸目标，适合单手操作（§24.1）；按钮使用 @mousedown.prevent，
  * 点击时不会抢走输入框焦点，因此电脑端物理键盘仍可正常输入（§41）。
  */
+import { onBeforeUnmount, ref } from 'vue'
+
 const props = withDefaults(
   defineProps<{
     disabled?: boolean
@@ -46,6 +48,28 @@ function guarded(action: () => void): void {
   action()
 }
 
+const pressedKey = ref('')
+let releaseHandle: ReturnType<typeof setTimeout> | null = null
+
+function beginPress(key: string): void {
+  if (props.disabled) return
+  if (releaseHandle !== null) clearTimeout(releaseHandle)
+  pressedKey.value = key
+  if ('vibrate' in navigator) navigator.vibrate(8)
+}
+
+function endPress(): void {
+  if (releaseHandle !== null) clearTimeout(releaseHandle)
+  releaseHandle = setTimeout(() => {
+    pressedKey.value = ''
+    releaseHandle = null
+  }, 120)
+}
+
+onBeforeUnmount(() => {
+  if (releaseHandle !== null) clearTimeout(releaseHandle)
+})
+
 const pressDigit = (value: string): void => guarded(() => emit('key', value))
 const pressBackspace = (): void => guarded(() => emit('backspace'))
 const pressClear = (): void => guarded(() => emit('clear'))
@@ -59,9 +83,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
     <button
       type="button"
       class="keypad-key keypad-key-fn"
+      :class="{ 'is-pressed': pressedKey === 'restart' }"
       :disabled="props.disabled"
       title="重开：清空输入并重新计时（不计入成绩）"
       @mousedown.prevent
+      @pointerdown="beginPress('restart')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressRestart"
     >
       重开
@@ -69,9 +97,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
     <button
       type="button"
       class="keypad-key keypad-key-fn"
+      :class="{ 'is-pressed': pressedKey === 'clear' }"
       :disabled="props.disabled"
       title="清空：清除当前输入的答案"
       @mousedown.prevent
+      @pointerdown="beginPress('clear')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressClear"
     >
       清空
@@ -79,10 +111,14 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
     <button
       type="button"
       class="keypad-key keypad-key-fn"
+      :class="{ 'is-pressed': pressedKey === 'backspace' }"
       :disabled="props.disabled"
       aria-label="退格"
       title="退格：删除最后一位"
       @mousedown.prevent
+      @pointerdown="beginPress('backspace')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressBackspace"
     >
       退格
@@ -95,9 +131,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
         :key="digit"
         type="button"
         class="keypad-key"
+        :class="{ 'is-pressed': pressedKey === digit }"
         :disabled="props.disabled"
         :aria-label="`数字 ${digit}`"
         @mousedown.prevent
+        @pointerdown="beginPress(digit)"
+        @pointerup="endPress"
+        @pointercancel="endPress"
         @click="pressDigit(digit)"
       >
         {{ digit }}
@@ -108,9 +148,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
     <button
       type="button"
       class="keypad-key"
+      :class="{ 'is-pressed': pressedKey === 'decimal' }"
       :disabled="props.disabled"
       aria-label="小数点"
       @mousedown.prevent
+      @pointerdown="beginPress('decimal')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressDigit('.')"
     >
       .
@@ -118,9 +162,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
     <button
       type="button"
       class="keypad-key"
+      :class="{ 'is-pressed': pressedKey === '0' }"
       :disabled="props.disabled"
       aria-label="数字 0"
       @mousedown.prevent
+      @pointerdown="beginPress('0')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressDigit('0')"
     >
       0
@@ -129,9 +177,13 @@ const pressSubmit = (): void => guarded(() => emit('submit'))
       v-if="props.showSubmit"
       type="button"
       class="keypad-key keypad-key-submit"
+      :class="{ 'is-pressed': pressedKey === 'submit' }"
       :disabled="props.disabled"
       title="确认：提交答案（Enter）"
       @mousedown.prevent
+      @pointerdown="beginPress('submit')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
       @click="pressSubmit"
     >
       确认

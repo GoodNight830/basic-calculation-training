@@ -12,6 +12,7 @@ import { useTrainingStore } from '@/app/stores/training'
 import { formatDuration } from '@/services/format'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { ActiveSession } from '@/types'
+import { hostSyncStatus } from '@/services/hostSync'
 
 const route = useRoute()
 const router = useRouter()
@@ -70,6 +71,9 @@ function isActive(path: string): boolean {
 
 <template>
   <div class="app-shell" :class="{ 'app-shell-focus': focusMode }">
+    <div v-if="hostSyncStatus.state === 'error'" class="host-sync-banner" role="alert">
+      {{ hostSyncStatus.message }}
+    </div>
     <aside v-if="!focusMode" class="app-sidebar desktop-only">
       <div class="app-brand">基础计算训练</div>
       <nav class="nav">

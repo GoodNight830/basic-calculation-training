@@ -25,6 +25,7 @@ import type {
 import { buildLocalDiagnosis } from './diagnosis'
 import * as aiSnapshotsRepo from '@/db/aiAnalysisSnapshots'
 import type { LocalDiagnosis, AiAnalysisSnapshot } from '@/types'
+import { scheduleHostSync } from './hostSync'
 
 export interface Overview {
   today: StatsSummary
@@ -107,18 +108,23 @@ export async function setWrongQuestionMastered(
   id: string,
   mastered: boolean
 ): Promise<WrongQuestion | null> {
-  return wrongQuestionsRepo.markWrongQuestionMastered(id, mastered)
+  const result = await wrongQuestionsRepo.markWrongQuestionMastered(id, mastered)
+  scheduleHostSync()
+  return result
 }
 
 export async function setManyWrongQuestionsMastered(
   ids: readonly string[],
   mastered: boolean
 ): Promise<number> {
-  return wrongQuestionsRepo.bulkMarkMastered(ids, mastered)
+  const result = await wrongQuestionsRepo.bulkMarkMastered(ids, mastered)
+  scheduleHostSync()
+  return result
 }
 
 export async function removeWrongQuestion(id: string): Promise<void> {
-  return wrongQuestionsRepo.deleteWrongQuestion(id)
+  await wrongQuestionsRepo.deleteWrongQuestion(id)
+  scheduleHostSync(true)
 }
 
 /** 错题除数范围分布（§13：训练某个范围的错题） */

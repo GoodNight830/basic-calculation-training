@@ -7,9 +7,10 @@ import { useSettingsStore } from '@/app/stores/settings'
 import { loadDiagnosis } from '@/services/queries'
 import { formatAiReportText, requestAiReport, PROMPT_VERSION } from '@/services/aiAnalysis'
 import { saveAiAnalysis } from '@/db/aiAnalysisSnapshots'
+import { scheduleHostSync } from '@/services/hostSync'
 import { newId } from '@/utils/id'
 import { formatMs, formatPercent } from '@/services/format'
-import type { AiAnalysisSnapshot, DiagnosisRange, LocalDiagnosis } from '@/types'
+import type { AiAnalysisSnapshot, DiagnosisRange, ErrorPatternCount, LocalDiagnosis } from '@/types'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
@@ -31,6 +32,12 @@ function confidenceLabel(value: DiagnosisRange['confidence']): string {
 }
 function trendLabel(value: DiagnosisRange['trend']): string {
   return { improving: '近期改善', worsening: '近期恶化', stable: '基本稳定', insufficient_data: '数据不足' }[value]
+}
+function patternLabel(value: ErrorPatternCount['type']): string {
+  return {
+    empty: '空答案', invalid: '无效输入', answer_too_large: '答案偏大', answer_too_small: '答案偏小',
+    slow_correct: '答对但用时较长', slow_wrong: '答错且用时较长', repeat_wrong: '重复答错'
+  }[value]
 }
 async function reload(): Promise<void> {
   loading.value = true
@@ -67,6 +74,7 @@ async function generateAi(): Promise<void> {
       model: settingsStore.settings.ai.model, promptVersion: PROMPT_VERSION, report
     }
     await saveAiAnalysis(snapshot)
+    scheduleHostSync()
     latestAi.value = snapshot
   } catch (error) {
     errorText.value = `报告保存失败：${describeError(error)}；AI 已返回，但报告未写入本地数据库。`
@@ -123,6 +131,12 @@ onMounted(() => void reload())
               <span class="badge" :class="range.trend === 'worsening' ? 'badge-warning' : range.trend === 'improving' ? 'badge-success' : ''">{{ trendLabel(range.trend) }}</span>
             </div>
             <div class="list-item-meta">最近7天错误率 {{ formatPercent(range.recent7.errorRate) }}（{{ range.recent7.sampleCount }}题） · 长期 {{ formatPercent(range.lifetime.errorRate) }} · 可信度 {{ confidenceLabel(range.confidence) }}</div>
+            <div v-if="range.errorPatterns.length" class="text-xs text-muted" style="margin-top:6px">
+              <span v-for="pattern in range.errorPatterns.slice(0, 3)" :key="pattern.type" style="display:block">
+                {{ patternLabel(pattern.type) }} {{ pattern.count }} 次（占该范围 {{ formatPercent(pattern.rate) }}）
+                <template v-if="pattern.topDivisors.length"> · 常见除数 {{ pattern.topDivisors.join('、') }}</template>
+              </span>
+            </div>
           </div>
         </div>
         <div v-else class="alert alert-info" style="margin-top:12px">各范围的近期样本尚不足，系统暂不判断薄弱范围。</div>

@@ -286,11 +286,17 @@ export interface DiagnosisRange {
   previous7: DiagnosisWindow
   trend: DiagnosisTrend
   confidence: DiagnosisConfidence
+  errorPatterns: ErrorPatternCount[]
 }
 
 export interface ErrorPatternCount {
   type: 'empty' | 'invalid' | 'answer_too_large' | 'answer_too_small' | 'slow_correct' | 'slow_wrong' | 'repeat_wrong'
   count: number
+  rate: number
+  recent7Count: number
+  recent30Count: number
+  /** 出现该错误类型最多的具体除数，最多 5 个；不包含用户答案。 */
+  topDivisors: number[]
 }
 
 export interface LocalDiagnosis {

@@ -25,6 +25,7 @@ import * as sessionsRepo from '@/db/sessions'
 import * as weakPatternsRepo from '@/db/weakPatterns'
 import * as wrongQuestionsRepo from '@/db/wrongQuestions'
 import * as aiSnapshotsRepo from '@/db/aiAnalysisSnapshots'
+import { scheduleHostSync } from './hostSync'
 import {
   buildQuestionRecord,
   computeTotals,
@@ -222,6 +223,7 @@ export async function beginSession(input: BeginSessionInput): Promise<ActiveSess
     status: 'active'
   })
   await activeSessionsRepo.putActiveSession(active)
+  scheduleHostSync()
   return active
 }
 
@@ -309,6 +311,7 @@ export async function submitAnswer(
 
   await activeSessionsRepo.putActiveSession(next)
   await sessionsRepo.putSession(sessionFromActive(next, 'active'))
+  scheduleHostSync()
 
   return { active: next, record, check, isComplete }
 }
@@ -320,6 +323,7 @@ export async function finishSession(active: ActiveSession): Promise<TrainingSess
   const finished = finalizeSession(base, active.answers, finishedAt)
   await sessionsRepo.putSession(finished)
   await activeSessionsRepo.clearActiveSession(active.id)
+  scheduleHostSync()
   return finished
 }
 
@@ -328,6 +332,7 @@ export async function abandonSession(active: ActiveSession): Promise<void> {
   const base = sessionFromActive(active, 'abandoned')
   await sessionsRepo.putSession({ ...base, status: 'abandoned', finishedAt: nowIso() })
   await activeSessionsRepo.clearActiveSession(active.id)
+  scheduleHostSync()
 }
 
 /** 读取用于统计/分析的正式数据（只包含已完成训练组，§9） */
@@ -355,6 +360,7 @@ export async function recomputeWeakPatterns(
   ])
   const patterns = analyzeWeakPatterns(analysis.records, previous, config, module)
   await weakPatternsRepo.replaceWeakPatterns(patterns, module)
+  scheduleHostSync()
   return patterns
 }
 
@@ -368,6 +374,7 @@ export async function clearAllData(): Promise<void> {
     activeSessionsRepo.clearAllActiveSessions()
     , aiSnapshotsRepo.clearAiAnalyses()
   ])
+  scheduleHostSync(true)
 }
 
 /** 手动判定单个答案（错题详情、自测等场景复用同一 validator） */

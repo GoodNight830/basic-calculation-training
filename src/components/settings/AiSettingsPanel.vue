@@ -40,6 +40,20 @@ function applyFastAiTokenPreset(): void {
   message.value = '已应用 FastAIToken 配置，请确认 Key 后保存设置'
   errorText.value = ''
 }
+function applyDeepSeekPreset(): void {
+  Object.assign(form, {
+    provider: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    wireApi: 'chat_completions',
+    transport: 'local_proxy',
+    reasoningEffort: 'medium',
+    reportDetail: 'standard',
+    maxOutputTokens: 1200
+  } satisfies Partial<AiSettings>)
+  message.value = '已应用 DeepSeek 配置，请填写 DeepSeek API Key 后保存'
+  errorText.value = ''
+}
 onMounted(async () => { await store.ensureLoaded(); sync() })
 </script>
 
@@ -47,7 +61,7 @@ onMounted(async () => { await store.ensureLoaded(); sync() })
   <div id="ai-settings" class="card section">
     <h2 class="card-title">AI 服务</h2>
     <p class="card-subtitle">模型只接收聚合统计；原始题目、逐题答案和 API Key 不会进入数据导出</p>
-    <div class="btn-row" style="margin-top:12px"><button class="btn btn-outline btn-sm" type="button" @click="applyFastAiTokenPreset">应用 FastAIToken 配置</button></div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn btn-outline btn-sm" type="button" @click="applyDeepSeekPreset">应用 DeepSeek 配置</button><button class="btn btn-outline btn-sm" type="button" @click="applyFastAiTokenPreset">应用 FastAIToken 配置</button></div>
     <div class="field" style="margin-top:14px"><label class="switch"><input v-model="form.enabled" type="checkbox" /><span>启用 AI 解读</span></label></div>
     <div class="field"><label class="field-label" for="ai-url">接口地址</label><input id="ai-url" v-model.trim="form.baseUrl" class="input input-mono" type="url" placeholder="https://api.example.com/v1" /><p class="field-hint">支持 OpenAI-compatible Chat Completions；本地 Ollama 或 LM Studio 可填写本机地址。</p></div>
     <div class="field"><label class="field-label" for="ai-model">模型名称</label><input id="ai-model" v-model.trim="form.model" class="input input-mono" type="text" placeholder="模型 ID" /></div>

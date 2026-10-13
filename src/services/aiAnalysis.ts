@@ -34,6 +34,10 @@ const REPORT_TERM_LABELS: ReadonlyArray<[RegExp, string]> = [
   [/\bp75ElapsedMs\b/gi, '较慢用时水平'],
   [/\bquestionCountSinceLastAi\b/gi, '上次分析后新增题数'],
   [/\berrorPatterns\b/gi, '错误类型分布'],
+  [/\brecent7Count\b/gi, '最近7天次数'],
+  [/\brecent30Count\b/gi, '最近30天次数'],
+  [/\btopDivisors\b/gi, '高频具体除数'],
+  [/\brate\b/gi, '占比'],
   [/\brangeMin\b/gi, '范围下限'],
   [/\brangeMax\b/gi, '范围上限'],
   [/\branges\b/gi, '除数范围'],
@@ -133,6 +137,11 @@ function wireApiFor(baseUrl: string, configured: AiSettings['wireApi']): AiSetti
   return /(^|\.)fastaitoken\.com$/i.test(hostname) ? 'responses' : configured
 }
 
+function isDeepSeek(settings: Pick<AiSettings, 'baseUrl' | 'provider'>): boolean {
+  const hostname = new URL(cleanBaseUrl(settings.baseUrl)).hostname
+  return /(^|\.)deepseek\.com$/i.test(hostname) || settings.provider.toLowerCase() === 'deepseek'
+}
+
 function endpoints(baseUrl: string, wireApi: AiSettings['wireApi']): string[] {
   const base = cleanBaseUrl(baseUrl)
   const parsed = new URL(base)
@@ -184,12 +193,30 @@ function systemPrompt(): string {
 事实、判断、建议必须分离。样本少于10不得判断；10-29仅低置信度；30-59最高中置信度；60以上才可高置信度。
 禁止编造数值、心理归因、绝对化表述和无证据恭维。鼓励只能引用真实改善。每条结论必须写限制。
 所有面向用户的文字必须使用自然中文，不得出现 answer_too_large、recent30、sampleCount 等内部字段名。
+分析错误类型时必须结合 ranges[].errorPatterns，说明错误主要集中在哪些除数范围；只有 topDivisors 有数据时才能提及具体除数。不得把全局错误次数误写成某个范围的次数。
 输出字段：summary, findings, nextPlan, uncertainty。findings字段严格使用 type,title,evidence,sampleCount,confidence,limitation,rangeMin,rangeMax,recommendation。nextPlan使用 action,rangeMin,rangeMax,suggestedQuestionCount,suggestedRatio,reevaluateAfterQuestions。`
 }
 
 function extractJson(text: string): unknown {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-  return JSON.parse(cleaned)
+  try {
+    return JSON.parse(cleaned)
+  } catch (error) {
+    throw new Error('AI 返回的 JSON 不完整或格式有误', { cause: error })
+  }
+}
+
+function responseWasTruncated(body: {
+  status?: string
+  incomplete_details?: { reason?: string }
+  choices?: Array<{ finish_reason?: string }>
+}): boolean {
+  return body.status === 'incomplete' || body.incomplete_details?.reason === 'max_output_tokens' ||
+    body.choices?.some((choice) => choice.finish_reason === 'length') === true
+}
+
+function isJsonParseFailure(error: unknown): boolean {
+  return error instanceof Error && error.cause instanceof SyntaxError
 }
 
 function assertString(value: unknown, field: string): asserts value is string {
@@ -257,6 +284,9 @@ export function validateAiReport(raw: unknown, diagnosis: LocalDiagnosis): AiRep
   const hadUnsafeLanguage = FORBIDDEN.some((word) => allText.includes(word))
   const rangeMap = new Map(diagnosis.ranges.map((r) => [`${r.rangeMin}-${r.rangeMax}`, r]))
   let filteredInvalidRange = false
+  let correctedSampleCount = false
+  let correctedConfidence = false
+  let correctedType = false
   const findings = value.findings.slice(0, 8).filter((item) => {
     if (!item || typeof item !== 'object') return true
     const candidate = item as { rangeMin?: number | null; rangeMax?: number | null }
@@ -273,14 +303,43 @@ export function validateAiReport(raw: unknown, diagnosis: LocalDiagnosis): AiRep
     assertString(finding.title, 'finding.title')
     assertString(finding.evidence, 'finding.evidence')
     assertString(finding.limitation, 'finding.limitation')
-    if (!['strength', 'weakness', 'improving', 'worsening', 'insufficient_data'].includes(finding.type)) throw new Error('AI 发现类型无效')
+    // 发现类型非法时自动纠正：常见别名映射到合法枚举，映射不到就降级为 insufficient_data，而不是丢弃整份报告。
+    const VALID_TYPES = ['strength', 'weakness', 'improving', 'worsening', 'insufficient_data'] as const
+    if (!VALID_TYPES.includes(finding.type as (typeof VALID_TYPES)[number])) {
+      const rawType = typeof finding.type === 'string' ? finding.type.trim().toLowerCase() : ''
+      const alias: Record<string, (typeof VALID_TYPES)[number]> = {
+        '优势': 'strength', '强项': 'strength', 'strengths': 'strength', 'strong': 'strength', 'good': 'strength', 'positive': 'strength',
+        '薄弱': 'weakness', '弱点': 'weakness', '弱项': 'weakness', 'weak': 'weakness', 'bad': 'weakness', 'negative': 'weakness', 'error': 'weakness',
+        '进步': 'improving', '改善': 'improving', '提升': 'improving', 'improve': 'improving', 'improvement': 'improving', 'better': 'improving',
+        '退步': 'worsening', '恶化': 'worsening', '下降': 'worsening', 'worse': 'worsening', 'decline': 'worsening',
+        '数据不足': 'insufficient_data', '不足': 'insufficient_data', 'insufficient': 'insufficient_data', 'unknown': 'insufficient_data', 'none': 'insufficient_data'
+      }
+      finding.type = alias[rawType] ?? 'insufficient_data'
+      correctedType = true
+    }
     const range = finding.rangeMin !== undefined && finding.rangeMax !== undefined ? rangeMap.get(`${finding.rangeMin}-${finding.rangeMax}`) : null
     const actualSamples = range?.recent7.sampleCount ?? diagnosis.recent7.sampleCount
-    if (finding.sampleCount !== actualSamples) throw new Error('AI 引用的样本量与本地统计不一致')
+    // 样本量口径以本地统计为准：模型填的样本量（可能是长期/30天口径）与本地「最近7天」不一致时，直接纠正而非丢弃整份报告。
+    if (finding.sampleCount !== actualSamples) {
+      finding.sampleCount = actualSamples
+      correctedSampleCount = true
+    }
     const maximum = actualSamples < 10 ? null : actualSamples < 30 ? 'low' : actualSamples < 60 ? 'medium' : 'high'
-    if (maximum === null && finding.type !== 'insufficient_data') throw new Error('AI 在样本不足时下了结论')
     const rank = { low: 1, medium: 2, high: 3 }
-    if (maximum && rank[finding.confidence] > rank[maximum]) throw new Error('AI 置信度超过本地规则')
+    if (maximum === null) {
+      // 样本不足：模型本不应下结论，降级为 insufficient_data 并把可信度压到最低，而不是让整份分析失败。
+      if (finding.type !== 'insufficient_data') {
+        finding.type = 'insufficient_data'
+        correctedConfidence = true
+      }
+      if (finding.confidence !== 'low') {
+        finding.confidence = 'low'
+        correctedConfidence = true
+      }
+    } else if (rank[finding.confidence] > rank[maximum]) {
+      finding.confidence = maximum
+      correctedConfidence = true
+    }
     return {
       ...finding,
       title: sanitizeReportText(localizeReportText(finding.title)),
@@ -309,6 +368,9 @@ export function validateAiReport(raw: unknown, diagnosis: LocalDiagnosis): AiRep
   const uncertainty = value.uncertainty.filter((x): x is string => typeof x === 'string').slice(0, 5).map((text) => sanitizeReportText(localizeReportText(text)))
   if (hadUnsafeLanguage) uncertainty.push('系统已将缺少数据依据的绝对化或恭维措辞改为中性表述。')
   if (filteredInvalidRange) uncertainty.push('系统已移除无法由本地统计验证的范围或训练比例。')
+  if (correctedType) uncertainty.push('系统已纠正了部分发现项的类型标注。')
+  if (correctedSampleCount) uncertainty.push('系统已按本地统计校正了部分发现项引用的样本量。')
+  if (correctedConfidence) uncertainty.push('系统已按样本量规则校正了部分发现项的可信度或结论类型。')
   return { summary: sanitizeReportText(localizeReportText(value.summary)), findings, nextPlan, uncertainty }
 }
 
@@ -320,42 +382,65 @@ export async function requestAiReport(settings: AiSettings, diagnosis: LocalDiag
   const effectiveWireApi = wireApiFor(settings.baseUrl, settings.wireApi)
   const isFastAiToken = /(^|\.)fastaitoken\.com$/i.test(new URL(cleanBaseUrl(settings.baseUrl)).hostname)
   const effectiveEffort = isFastAiToken && settings.reportDetail !== 'detailed' ? 'low' : settings.reasoningEffort
-  const effectiveMaxTokens = settings.reportDetail === 'short' ? Math.min(settings.maxOutputTokens, 600) : Math.min(settings.maxOutputTokens, 1000)
-  const requestBody = effectiveWireApi === 'responses'
-    ? {
-        model: settings.model,
-        instructions: systemPrompt(),
-        input: promptInput,
-        max_output_tokens: effectiveMaxTokens,
-        reasoning: { effort: effectiveEffort },
-        text: { format: { type: 'json_schema', name: 'calculation_diagnosis', strict: true, schema: REPORT_JSON_SCHEMA } },
-        store: false
+  const effectiveMaxTokens = settings.reportDetail === 'short' ? Math.min(settings.maxOutputTokens, 600) : settings.maxOutputTokens
+  const deepSeek = isDeepSeek(settings)
+  const deepSeekReasoner = deepSeek && settings.model.toLowerCase().includes('reasoner')
+  const retryMaxTokens = Math.min(4000, Math.max(effectiveMaxTokens * 2, 2000))
+  let lastError: unknown = null
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const maxTokens = attempt === 0 ? effectiveMaxTokens : retryMaxTokens
+    const conciseInstruction = attempt === 0 ? '' : '\n上一次输出被截断。请缩短文字，每项只写一句话，确保 JSON 完整闭合。'
+    const requestBody = effectiveWireApi === 'responses'
+      ? {
+          model: settings.model,
+          instructions: `${systemPrompt()}${conciseInstruction}`,
+          input: promptInput,
+          max_output_tokens: maxTokens,
+          reasoning: { effort: attempt === 0 ? effectiveEffort : 'low' },
+          text: { format: { type: 'json_schema', name: 'calculation_diagnosis', strict: true, schema: REPORT_JSON_SCHEMA } },
+          store: false
+        }
+      : {
+          model: settings.model,
+          max_tokens: maxTokens,
+          ...(!deepSeekReasoner ? { temperature: 0.1, response_format: { type: 'json_object' } } : {}),
+          messages: [
+            { role: 'system', content: `${systemPrompt()}\n请只输出一个可被 JSON.parse 解析的 JSON 对象，不要使用 Markdown 代码块。${conciseInstruction}` },
+            { role: 'user', content: promptInput }
+          ],
+          ...(deepSeek ? { stream: false } : {})
+        }
+    const body = await performJsonRequest(settings, requestBody, 90_000, signal) as {
+      status?: string
+      incomplete_details?: { reason?: string }
+      output_text?: string
+      output?: Array<{ content?: Array<{ text?: string }> }>
+      choices?: Array<{ finish_reason?: string; message?: { content?: string } }>
+    }
+    const content = effectiveWireApi === 'responses'
+      ? body.output_text ?? body.output?.flatMap((item) => item.content ?? []).find((item) => typeof item.text === 'string')?.text
+      : body.choices?.[0]?.message?.content
+    if (!content) {
+      lastError = new Error(responseWasTruncated(body) ? 'AI 输出额度不足，未能生成完整报告' : 'AI 服务没有返回报告内容')
+    } else {
+      try {
+        return validateAiReport(extractJson(content), diagnosis)
+      } catch (error) {
+        lastError = error
+        if (!responseWasTruncated(body) && !isJsonParseFailure(error)) throw error
       }
-    : {
-        model: settings.model,
-        temperature: 0.1,
-        max_tokens: settings.maxOutputTokens,
-        response_format: { type: 'json_object' },
-        messages: [{ role: 'system', content: systemPrompt() }, { role: 'user', content: promptInput }]
-      }
-  const body = await performJsonRequest(settings, requestBody, 90_000, signal) as {
-    output_text?: string
-    output?: Array<{ content?: Array<{ text?: string }> }>
-    choices?: Array<{ message?: { content?: string } }>
+    }
   }
-  const content = effectiveWireApi === 'responses'
-    ? body.output_text ?? body.output?.flatMap((item) => item.content ?? []).find((item) => typeof item.text === 'string')?.text
-    : body.choices?.[0]?.message?.content
-  if (!content) throw new Error('AI 服务没有返回报告内容')
-  return validateAiReport(extractJson(content), diagnosis)
+  throw new Error('AI 连续两次返回了不完整的 JSON，请调高“最大输出量”或稍后重试', { cause: lastError })
 }
 
 export async function testAiConnection(settings: AiSettings): Promise<void> {
   if (!settings.baseUrl || !settings.model) throw new Error('请填写接口地址和模型名称')
   if (['openai', 'fastaitoken', 'custom'].includes(settings.model.trim().toLowerCase())) throw new Error('模型名称填写的是服务商名称；FastAIToken 配置应填写 gpt-5.5')
+  const deepSeek = isDeepSeek(settings)
   const body = wireApiFor(settings.baseUrl, settings.wireApi) === 'responses'
     ? { model: settings.model, input: '只回复 OK', max_output_tokens: 16, reasoning: { effort: settings.reasoningEffort }, store: false }
-    : { model: settings.model, max_tokens: 8, messages: [{ role: 'user', content: '只回复 OK' }] }
+    : { model: settings.model, max_tokens: 16, messages: [{ role: 'user', content: '只回复 OK' }], ...(deepSeek ? { stream: false } : {}) }
   await performJsonRequest(settings, body, 45_000)
 }
 

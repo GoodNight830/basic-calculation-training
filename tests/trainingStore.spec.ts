@@ -263,6 +263,24 @@ describe('训练页布局（题目固定 + 键盘贴底，回归：下滑看不�
     expect(head).toContain('优秀：60S')
     unmount()
   })
+
+  it('重开本题会清空答案、重置计时并显示成功反馈', async () => {
+    const { container, unmount } = await mountTrainingPage()
+    const store = useTrainingStore()
+
+    clickByText(container, '5')
+    await nextTick()
+    expect((container.querySelector('.answer-line') as HTMLInputElement).value).toBe('5')
+
+    clickByText(container, '重开')
+    await nextTick()
+
+    expect((container.querySelector('.answer-line') as HTMLInputElement).value).toBe('')
+    expect(container.textContent).toContain('本题已重开，计时已归零')
+    expect(store.liveElapsedMs).toBe(0)
+    store.stopTimer()
+    unmount()
+  })
 })
 
 describe('数字键盘组件事件链路（§41）', () => {

@@ -16,6 +16,7 @@ import * as settingsRepo from '@/db/settings'
 import * as weakPatternsRepo from '@/db/weakPatterns'
 import * as wrongQuestionsRepo from '@/db/wrongQuestions'
 import type { ActiveSession, QuestionRecord, TrainingSession, WeakPattern, WrongQuestion } from '@/types'
+import { scheduleHostSync } from './hostSync'
 
 export interface ExportData {
   sessions: TrainingSession[]
@@ -327,6 +328,7 @@ export async function importPayload(
   }
 
   result.skipped = skipped
+  scheduleHostSync()
   return result
 }
 
