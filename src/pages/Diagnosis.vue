@@ -4,28 +4,46 @@ import { useRouter } from 'vue-router'
 import StatCard from '@/components/common/StatCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useSettingsStore } from '@/app/stores/settings'
-import { loadDiagnosis } from '@/services/queries'
+import { useTrainingStore } from '@/app/stores/training'
+import { loadDiagnosis, loadWrongQuestions } from '@/services/queries'
 import { formatAiReportText, requestAiReport, PROMPT_VERSION } from '@/services/aiAnalysis'
 import { saveAiAnalysis } from '@/db/aiAnalysisSnapshots'
 import { scheduleHostSync } from '@/services/hostSync'
 import { newId } from '@/utils/id'
-import { formatMs, formatPercent } from '@/services/format'
-import type { AiAnalysisSnapshot, DiagnosisRange, ErrorPatternCount, LocalDiagnosis } from '@/types'
+import { formatMs, formatPercent, formatDateTime } from '@/services/format'
+import type {
+  AiAnalysisSnapshot,
+  AiTrainingAction,
+  DiagnosisRange,
+  ErrorPatternCount,
+  LocalDiagnosis
+} from '@/types'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const trainingStore = useTrainingStore()
 const loading = ref(true)
 const generating = ref(false)
 const analysisElapsedSeconds = ref(0)
 const errorText = ref('')
 const diagnosis = ref<LocalDiagnosis | null>(null)
 const latestAi = ref<AiAnalysisSnapshot | null>(null)
+const aiHistory = ref<AiAnalysisSnapshot[]>([])
+const startingPlan = ref(false)
 let analysisController: AbortController | null = null
 let analysisTimer: ReturnType<typeof setInterval> | null = null
 
 const focusRanges = computed(() => diagnosis.value?.ranges.filter((r) => r.recent7.sampleCount >= 10).slice(0, 3) ?? [])
 const improvedRanges = computed(() => diagnosis.value?.ranges.filter((r) => r.trend === 'improving') ?? [])
 const canAnalyze = computed(() => settingsStore.settings.ai.enabled && settingsStore.settings.ai.consentToUpload && Boolean(settingsStore.settings.ai.model))
+
+/** 上一份报告（用于与最新报告做历史对比） */
+const previousAi = computed(() => aiHistory.value[1] ?? null)
+/** 本次报告相对上次新增的题目数 */
+const questionDelta = computed(() => {
+  if (!latestAi.value || !previousAi.value) return null
+  return latestAi.value.questionCount - previousAi.value.questionCount
+})
 
 function confidenceLabel(value: DiagnosisRange['confidence']): string {
   return { insufficient: '数据不足', low: '低', medium: '中', high: '高' }[value]
@@ -39,6 +57,18 @@ function patternLabel(value: ErrorPatternCount['type']): string {
     slow_correct: '答对但用时较长', slow_wrong: '答错且用时较长', repeat_wrong: '重复答错'
   }[value]
 }
+
+/** 把一条 AI 计划动作格式化为可读文本 */
+function planText(action: AiTrainingAction): string {
+  const range = action.rangeMin !== undefined && action.rangeMax !== undefined
+    ? `（除数 ${action.rangeMin}–${action.rangeMax}）`
+    : ''
+  const count = action.suggestedQuestionCount !== undefined ? `，建议 ${action.suggestedQuestionCount} 题` : ''
+  const ratio = action.suggestedRatio !== undefined ? `，强化占比 ${Math.round(action.suggestedRatio * 100)}%` : ''
+  const reeval = action.reevaluateAfterQuestions !== undefined ? `，做完 ${action.reevaluateAfterQuestions} 题后复评` : ''
+  return `${formatAiReportText(action.action)}${range}${count}${ratio}${reeval}`
+}
+
 async function reload(): Promise<void> {
   loading.value = true
   errorText.value = ''
@@ -47,6 +77,7 @@ async function reload(): Promise<void> {
     const result = await loadDiagnosis()
     diagnosis.value = result.diagnosis
     latestAi.value = result.latestAi
+    aiHistory.value = result.aiHistory
   } catch (error) {
     errorText.value = error instanceof Error ? error.message : '诊断加载失败'
   } finally { loading.value = false }
@@ -76,9 +107,39 @@ async function generateAi(): Promise<void> {
     await saveAiAnalysis(snapshot)
     scheduleHostSync()
     latestAi.value = snapshot
+    aiHistory.value = [snapshot, ...aiHistory.value]
   } catch (error) {
     errorText.value = `报告保存失败：${describeError(error)}；AI 已返回，但报告未写入本地数据库。`
   } finally { finishGenerating() }
+}
+
+/** 按 AI 计划开始训练：优先练该范围的错题，无错题则回退普通随机训练 */
+async function startPlan(): Promise<void> {
+  if (!latestAi.value || startingPlan.value) return
+  const plan = latestAi.value.report.nextPlan[0]
+  if (!plan) return
+  startingPlan.value = true
+  errorText.value = ''
+  try {
+    const settings = await settingsStore.ensureLoaded()
+    const hasRange = plan.rangeMin !== undefined && plan.rangeMax !== undefined
+    let wrongQuestions: Awaited<ReturnType<typeof loadWrongQuestions>> = []
+    if (hasRange) {
+      wrongQuestions = await loadWrongQuestions({ rangeMin: plan.rangeMin, rangeMax: plan.rangeMax })
+    }
+    if (wrongQuestions.length > 0) {
+      await trainingStore.start({ mode: 'training', source: 'wrongQuestions', wrongQuestions })
+    } else {
+      await trainingStore.start({
+        mode: settings.defaultMode,
+        questionCount: plan.suggestedQuestionCount ?? settings.defaultQuestionCount,
+        allowedErrorRate: settings.defaultAllowedErrorRate
+      })
+    }
+    await router.push({ name: 'training' })
+  } catch (error) {
+    errorText.value = error instanceof Error ? error.message : '开始训练失败，请稍后重试'
+  } finally { startingPlan.value = false }
 }
 
 function cancelAnalysis(): void {
@@ -147,12 +208,39 @@ onMounted(() => void reload())
         <div class="row-between"><div><h2 class="card-title">AI 解读</h2><p class="card-subtitle">仅发送页面所示聚合数据，不发送逐题答案</p></div><span v-if="latestAi" class="badge">{{ latestAi.model }}</span></div>
         <template v-if="latestAi">
           <p>{{ formatAiReportText(latestAi.report.summary) }}</p>
+
           <div class="list">
             <div v-for="(finding, index) in latestAi.report.findings" :key="index" class="list-item">
-              <div class="bold">{{ formatAiReportText(finding.title) }}</div><div class="text-sm">{{ formatAiReportText(finding.evidence) }}</div>
+              <div class="bold">{{ formatAiReportText(finding.title) }}</div>
+              <div class="text-sm">{{ formatAiReportText(finding.evidence) }}</div>
+              <div v-if="finding.recommendation" class="text-sm text-success" style="margin-top:4px">建议：{{ formatAiReportText(finding.recommendation) }}</div>
               <div class="text-xs text-muted">样本 {{ finding.sampleCount }} · 可信度 {{ finding.confidence }} · {{ formatAiReportText(finding.limitation) }}</div>
             </div>
           </div>
+
+          <div v-if="latestAi.report.nextPlan.length" class="card" style="background: var(--surface-2); margin-top:12px">
+            <div class="bold" style="margin-bottom:8px">下一步训练计划</div>
+            <div class="list">
+              <div v-for="(action, index) in latestAi.report.nextPlan" :key="index" class="list-item">
+                <div class="text-sm">{{ planText(action) }}</div>
+              </div>
+            </div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn btn-primary" type="button" :disabled="startingPlan" @click="startPlan">
+                {{ startingPlan ? '正在开始…' : '按计划开始训练' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="latestAi.report.uncertainty.length" class="alert alert-info" style="margin-top:12px">
+            <div class="bold" style="margin-bottom:4px">系统修正说明</div>
+            <div v-for="(note, index) in latestAi.report.uncertainty" :key="index" class="text-sm">{{ formatAiReportText(note) }}</div>
+          </div>
+
+          <div v-if="previousAi" class="text-xs text-muted" style="margin-top:12px">
+            上次报告 {{ formatDateTime(previousAi.createdAt) }} · 本次较上次新增 {{ questionDelta ?? 0 }} 题，累计 {{ aiHistory.length }} 份报告。
+          </div>
+          <div v-else class="text-xs text-muted" style="margin-top:12px">这是第一份 AI 报告。</div>
         </template>
         <p v-else class="text-sm text-muted">尚未生成 AI 报告。本地诊断无需模型即可使用。</p>
         <div class="btn-row" style="margin-top:12px">
