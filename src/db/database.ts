@@ -22,7 +22,8 @@ import type {
   TrainingSession,
   WeakPattern,
   WrongQuestion,
-  AiAnalysisSnapshot
+  AiAnalysisSnapshot,
+  Bookmark
 } from '@/types'
 
 export class TrainingDatabase extends Dexie {
@@ -33,6 +34,7 @@ export class TrainingDatabase extends Dexie {
   settings!: Table<SettingRow, string>
   activeSessions!: Table<ActiveSession, string>
   aiAnalysisSnapshots!: Table<AiAnalysisSnapshot, string>
+  bookmarks!: Table<Bookmark, string>
 
   constructor(name: string = DB_NAME) {
     super(name)
@@ -52,6 +54,16 @@ export class TrainingDatabase extends Dexie {
       settings: 'key, updatedAt',
       activeSessions: 'id, module, mode, updatedAt',
       aiAnalysisSnapshots: 'id, module, createdAt, dataHash'
+    })
+    this.version(3).stores({
+      sessions: 'id, module, mode, status, startedAt, createdAt',
+      questions: 'id, sessionId, module, mode, correct, divisor, createdAt, submittedAt',
+      wrongQuestions: 'id, &questionKey, module, status, divisor, createdAt, lastWrongAt',
+      weakPatterns: 'id, module, dimension, status, updatedAt',
+      settings: 'key, updatedAt',
+      activeSessions: 'id, module, mode, updatedAt',
+      aiAnalysisSnapshots: 'id, module, createdAt, dataHash',
+      bookmarks: 'id, &questionKey, module, createdAt, updatedAt'
     })
   }
 }
