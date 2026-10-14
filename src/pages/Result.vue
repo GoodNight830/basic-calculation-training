@@ -12,6 +12,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useTrainingStore } from '@/app/stores/training'
 import { useSettingsStore } from '@/app/stores/settings'
+import BookmarkButton from '@/components/common/BookmarkButton.vue'
 import { gradeDescription, gradeLabel } from '@/services/grading'
 import { formatDuration, formatMs, formatPercent } from '@/services/format'
 import { formatErrorRate, formatNumber } from '@/modules/arithmetic/five-divide-three/calculator'
@@ -169,6 +170,15 @@ async function restartSameMode(): Promise<void> {
                 薄弱点强化
                 <template v-if="record.weakRange"> {{ record.weakRange.min }}–{{ record.weakRange.max }}</template>
               </span>
+            </div>
+            <div class="list-item-meta" style="margin-top: 6px">
+              <BookmarkButton
+                :module="record.module"
+                :question="record.question"
+                :dividend="record.dividend"
+                :divisor="record.divisor"
+                :correct-answer="record.correctAnswer"
+              />
             </div>
           </div>
         </div>
