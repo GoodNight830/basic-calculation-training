@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * 基础计算（信息架构 v2 二级页）：
- * - 题型网格：仅「五位数 ÷ 三位数」可用，其余为占位（后续版本开放）
- * - 快速开始：沿用原首页逻辑，默认参数一键开始
+ * - 快速开始：显示用户最近最常使用的子功能（训练模式/竞速模式），一键开始
+ * - 题型网格：仅「五位数 ÷ 三位数」可用，其余为占位
  * - 今日概览 / 薄弱点提示 / 训练工具入口（错题、记录、薄弱点、诊断）
  *
  * 数据一律通过 @/services/queries 读取，不直接访问 IndexedDB（§34 / §48.7）。
@@ -13,7 +13,7 @@ import StatCard from '@/components/common/StatCard.vue'
 import { useSettingsStore } from '@/app/stores/settings'
 import { useTrainingStore } from '@/app/stores/training'
 import { MODULE_FIVE_DIVIDE_THREE } from '@/config/trainingConfig'
-import { loadOverview, loadWrongQuestions, type Overview } from '@/services/queries'
+import { loadOverview, loadWrongQuestions, loadHistory, type Overview } from '@/services/queries'
 import { weakPatternSuggestion } from '@/services/weakPattern'
 import { formatMs, formatPercent } from '@/services/format'
 import type { TrainingMode } from '@/types'
@@ -27,13 +27,12 @@ const loading = ref(true)
 const errorMessage = ref('')
 const retrying = ref(false)
 const startingMode = ref<TrainingMode | ''>('')
+const recentMode = ref<TrainingMode>('training')
 
 const today = computed(() => overview.value?.today ?? null)
 const unmasteredWrongCount = computed(() => overview.value?.unmasteredWrongCount ?? 0)
 const settings = computed(() => settingsStore.settings)
-const defaultModeLabel = computed(() =>
-  settings.value.defaultMode === 'speed' ? '竞速模式' : '训练模式'
-)
+const recentModeLabel = computed(() => (recentMode.value === 'speed' ? '竞速模式' : '训练模式'))
 
 const todayAvgElapsed = computed(() => {
   const summary = today.value
@@ -82,12 +81,26 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** 统计最近 30 天最常使用的训练模式，作为「常用子功能」 */
+function pickRecentMode(): Promise<void> {
+  return loadHistory('30d').then((data) => {
+    let training = 0
+    let speed = 0
+    for (const s of data.sessions) {
+      if (s.mode === 'speed') speed += 1
+      else training += 1
+    }
+    recentMode.value = speed > training ? 'speed' : 'training'
+  })
+}
+
 async function load(): Promise<void> {
   loading.value = true
   errorMessage.value = ''
   try {
     await settingsStore.ensureLoaded()
-    overview.value = await loadOverview()
+    const [ov] = await Promise.all([loadOverview(), pickRecentMode()])
+    overview.value = ov
   } catch (error) {
     errorMessage.value = errorText(error)
   } finally {
@@ -95,9 +108,9 @@ async function load(): Promise<void> {
   }
 }
 
-/** 直接开始练习：参数在「设置」中配置，点击后立即开始（§26） */
+/** 直接开始练习：使用常用模式（§26） */
 async function startPractice(mode?: TrainingMode): Promise<void> {
-  const target: TrainingMode = mode ?? settingsStore.settings.defaultMode
+  const target: TrainingMode = mode ?? recentMode.value
   startingMode.value = target
   errorMessage.value = ''
   try {
@@ -138,7 +151,7 @@ onMounted(load)
     <div class="page-header">
       <div>
         <h1 class="page-title">基础计算</h1>
-        <p class="page-subtitle">选择题型进入训练，或用默认配置快速开始</p>
+        <p class="page-subtitle">选择题型进入训练，或一键快速开始</p>
       </div>
     </div>
 
@@ -151,16 +164,13 @@ onMounted(load)
           <div>
             <div class="card-title">五位数 ÷ 三位数</div>
             <p class="text-sm text-muted" style="margin: 4px 0 0">
-              {{ defaultModeLabel }} · {{ settings.defaultQuestionCount }} 题 · 允许误差 {{ settings.defaultAllowedErrorRate }}%
+              最近常用：{{ recentModeLabel }} · {{ settings.defaultQuestionCount }} 题 · 允许误差 {{ settings.defaultAllowedErrorRate }}%
             </p>
           </div>
-          <button type="button" class="btn btn-ghost btn-sm" @click="router.push({ name: 'five-divide-three', query: { module: 'five-divide-three' } })">
-            训练介绍
-          </button>
         </div>
         <div class="btn-row" style="margin-top: 12px">
           <button type="button" class="btn btn-primary" :disabled="startingMode !== ''" @click="startPractice()">
-            {{ startingMode ? '正在开始…' : '开始练习' }}
+            {{ startingMode ? '正在开始…' : `开始练习（${recentModeLabel}）` }}
           </button>
           <button type="button" class="btn btn-outline btn-sm" :disabled="startingMode !== ''" @click="startPractice('training')">训练模式</button>
           <button type="button" class="btn btn-outline btn-sm" :disabled="startingMode !== ''" @click="startPractice('speed')">竞速模式</button>
@@ -216,7 +226,7 @@ onMounted(load)
             <span class="text-sm text-muted">未掌握 {{ unmasteredWrongCount }} 题</span>
           </span>
         </button>
-        <button type="button" class="list-item card-interactive" @click="router.push({ name: 'history' })">
+        <button type="button" class="list-item card-interactive" @click="router.push({ name: 'profile' })">
           <span class="list-item-main">
             <span class="bold">📈 训练记录</span>
             <span class="text-sm text-muted">历史统计与每日趋势</span>
