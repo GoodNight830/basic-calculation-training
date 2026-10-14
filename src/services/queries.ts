@@ -24,8 +24,10 @@ import type {
 } from '@/types'
 import { buildLocalDiagnosis } from './diagnosis'
 import * as aiSnapshotsRepo from '@/db/aiAnalysisSnapshots'
-import type { LocalDiagnosis, AiAnalysisSnapshot } from '@/types'
+import type { LocalDiagnosis, AiAnalysisSnapshot, Bookmark } from '@/types'
 import { scheduleHostSync } from './hostSync'
+import { newId } from '@/utils/id'
+import * as bookmarksRepo from '@/db/bookmarks'
 
 export interface Overview {
   today: StatsSummary
@@ -191,4 +193,52 @@ export async function loadDiagnosis(module: string = MODULE_FIVE_DIVIDE_THREE): 
     latestAi,
     aiHistory
   }
+}
+
+/* ---------- 收藏与笔记（§21.1） ---------- */
+
+export async function loadBookmarks(module?: string): Promise<Bookmark[]> {
+  return bookmarksRepo.listBookmarks(module)
+}
+
+export interface BookmarkTarget {
+  module: string
+  question: string
+  dividend: number
+  divisor: number
+  correctAnswer: number
+}
+
+/** 收藏或取消收藏一道题（按「被除数:除数」聚合）；返回最新收藏列表与本次是否收藏 */
+export async function toggleBookmark(target: BookmarkTarget): Promise<{ bookmarks: Bookmark[]; bookmarked: boolean }> {
+  const questionKey = `${target.dividend}:${target.divisor}`
+  const existing = await bookmarksRepo.getBookmarkByKey(questionKey)
+  if (existing) {
+    await bookmarksRepo.deleteBookmark(existing.id)
+    return { bookmarks: await bookmarksRepo.listBookmarks(), bookmarked: false }
+  }
+  const now = new Date().toISOString()
+  const bookmark: Bookmark = {
+    id: newId(),
+    module: target.module,
+    questionKey,
+    question: target.question,
+    dividend: target.dividend,
+    divisor: target.divisor,
+    correctAnswer: target.correctAnswer,
+    note: '',
+    createdAt: now,
+    updatedAt: now
+  }
+  await bookmarksRepo.putBookmark(bookmark)
+  return { bookmarks: await bookmarksRepo.listBookmarks(), bookmarked: true }
+}
+
+export async function updateBookmarkNote(id: string, note: string): Promise<Bookmark | null> {
+  const existing = await bookmarksRepo.listBookmarks()
+  const found = existing.find((b) => b.id === id)
+  if (!found) return null
+  const updated: Bookmark = { ...found, note, updatedAt: new Date().toISOString() }
+  await bookmarksRepo.putBookmark(updated)
+  return updated
 }
