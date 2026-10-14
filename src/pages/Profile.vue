@@ -9,7 +9,6 @@
  * 数据一律通过 @/services/queries 读取，不直接访问 IndexedDB（§34）。
  */
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import StatCard from '@/components/common/StatCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import GradeBadge from '@/components/common/GradeBadge.vue'
@@ -38,8 +37,6 @@ import type { QuestionRecord, Bookmark } from '@/types'
 const RANGE_KEYS: readonly TimeRange[] = ['today', '7d', '30d', 'all']
 /** 饼状图配色（按模块顺序取用） */
 const PIE_COLORS = ['#4f7cff', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b']
-
-const router = useRouter()
 
 const loading = ref(true)
 const profile = ref<ProfileData | null>(null)
