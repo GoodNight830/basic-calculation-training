@@ -69,6 +69,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '训练记录' }
   },
   {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/pages/Profile.vue'),
+    meta: { title: '个人数据', nav: true, navOrder: 2, icon: '📊', label: '个人数据' }
+  },
+  {
     path: '/weak',
     name: 'weak',
     component: () => import('@/pages/WeakPatterns.vue'),
@@ -83,8 +89,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/settings',
     name: 'settings',
-    component: () => import('@/pages/Settings.vue'),
-    meta: { title: '我的', nav: true, navOrder: 2, icon: '👤', label: '我的' }
+    component: () => import('@/pages/SettingsPage.vue'),
+    meta: { title: '设置', nav: true, navOrder: 3, icon: '⚙️', label: '设置' }
   },
   {
     path: '/:pathMatch(.*)*',
