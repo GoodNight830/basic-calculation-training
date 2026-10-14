@@ -351,3 +351,19 @@ export interface AiAnalysisSnapshot {
   promptVersion: string
   report: AiReport
 }
+
+/** 收藏的题目（§21.1 新增）：按「被除数:除数」聚合，同一道题只收藏一次 */
+export interface Bookmark {
+  id: string
+  module: string
+  /** `${dividend}:${divisor}`，唯一键 */
+  questionKey: string
+  question: string
+  dividend: number
+  divisor: number
+  correctAnswer: number
+  /** 用户笔记（可空） */
+  note: string
+  createdAt: string
+  updatedAt: string
+}
