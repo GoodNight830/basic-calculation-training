@@ -242,3 +242,64 @@ export async function updateBookmarkNote(id: string, note: string): Promise<Book
   await bookmarksRepo.putBookmark(updated)
   return updated
 }
+
+/* ---------- 个人数据概览（跨模块聚合） ---------- */
+
+export interface ModuleStat {
+  module: string
+  sessionCount: number
+  questionCount: number
+  correctCount: number
+  accuracy: number
+  totalElapsedMs: number
+}
+
+export interface ProfileData {
+  total: StatsSummary
+  modules: ModuleStat[]
+  bookmarkCount: number
+  wrongQuestionCount: number
+  masteredWrongCount: number
+}
+
+/** 跨模块聚合个人数据：总览 + 各模块占比（用于个人数据页的饼状图与概览卡） */
+export async function loadProfileData(): Promise<ProfileData> {
+  const [analysis, bookmarks, wrongQuestions] = await Promise.all([
+    loadSessionAnalysisData(),
+    bookmarksRepo.listBookmarks(),
+    wrongQuestionsRepo.listWrongQuestions({})
+  ])
+
+  // 按模块分组聚合（自动覆盖所有有做题记录的模块）
+  const moduleMap = new Map<string, ModuleStat>()
+  for (const record of analysis.records) {
+    const entry = moduleMap.get(record.module) ?? {
+      module: record.module,
+      sessionCount: 0,
+      questionCount: 0,
+      correctCount: 0,
+      accuracy: 0,
+      totalElapsedMs: 0
+    }
+    entry.questionCount += 1
+    entry.correctCount += record.correct ? 1 : 0
+    entry.totalElapsedMs += Number.isFinite(record.elapsedMs) ? record.elapsedMs : 0
+    moduleMap.set(record.module, entry)
+  }
+  for (const session of analysis.sessions) {
+    const entry = moduleMap.get(session.module)
+    if (entry) entry.sessionCount += 1
+  }
+  for (const entry of moduleMap.values()) {
+    entry.accuracy = accuracyOf(entry.correctCount, entry.questionCount)
+  }
+  const modules = [...moduleMap.values()].sort((a, b) => b.questionCount - a.questionCount)
+
+  return {
+    total: summarize(analysis.sessions, analysis.records),
+    modules,
+    bookmarkCount: bookmarks.length,
+    wrongQuestionCount: wrongQuestions.length,
+    masteredWrongCount: wrongQuestions.filter((q) => q.status === 'mastered').length
+  }
+}
