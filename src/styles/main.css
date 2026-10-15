@@ -1262,12 +1262,6 @@ button {
   min-height: 64px;
 }
 
-.training-timer {
-  font-variant-numeric: tabular-nums;
-  font-size: 1.25rem;
-  color: var(--color-muted);
-}
-
 .host-sync-banner {
   position: fixed;
   top: 8px;
