@@ -27,7 +27,9 @@ export const arithmeticModules: ArithmeticModule[] = [
       title: '五除三',
       subtitle: '五位数 ÷ 三位数',
       description: `例如 58231 ÷ 317，默认 ${QUESTION_COUNT.default} 题，允许误差 3%`,
-      enabled: true
+      enabled: true,
+      diagnosisSupported: true,
+      aiSupported: true
     },
     generator: fiveDivideThreeGenerator,
     validate: checkAnswer,
@@ -45,4 +47,14 @@ export function getArithmeticModule(moduleId: string): ArithmeticModule {
 
 export function findArithmeticModule(moduleId: string): ArithmeticModule | null {
   return arithmeticModules.find((m) => m.meta.id === moduleId) ?? null
+}
+
+/** 支持本地能力诊断的模块（按注册顺序） */
+export function listDiagnosableModules(): ArithmeticModule[] {
+  return arithmeticModules.filter((m) => m.meta.enabled && m.meta.diagnosisSupported)
+}
+
+/** 支持 AI 解读的模块（按注册顺序） */
+export function listAiModules(): ArithmeticModule[] {
+  return arithmeticModules.filter((m) => m.meta.enabled && m.meta.aiSupported)
 }
