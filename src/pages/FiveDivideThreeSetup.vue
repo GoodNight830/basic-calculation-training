@@ -209,6 +209,23 @@ onMounted(load)
           {{ retrying ? '正在准备…' : `开始错题重练（${unmasteredCount} 题）` }}
         </button>
       </div>
+
+      <div class="card section">
+        <div class="row-between">
+          <div>
+            <h2 class="card-title">AI 诊断</h2>
+            <p class="card-subtitle">用自然语言解释本模块的薄弱范围，并给出下一步训练计划</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn btn-primary btn-block"
+          style="margin-top: 12px"
+          @click="goAi"
+        >
+          进入 AI 诊断
+        </button>
+      </div>
     </template>
   </div>
 </template>
