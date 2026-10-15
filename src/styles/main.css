@@ -1062,12 +1062,8 @@ button {
   }
 }
 
-/* 更矮的屏幕：隐藏非关键信息行，只保留题目、答案、用时与键盘 */
+/* 更矮的屏幕：隐藏非关键信息行，只保留题目、答案与键盘 */
 @media (max-height: 680px) {
-  .training-legend {
-    display: none;
-  }
-
   .training-keypad-hint {
     display: none;
   }
