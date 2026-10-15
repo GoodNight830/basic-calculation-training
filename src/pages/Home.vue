@@ -127,7 +127,6 @@ const touchDragging = ref(false)
 let touchTimer: ReturnType<typeof setTimeout> | null = null
 let touchStartX = 0
 let touchStartY = 0
-let touchActive = false
 
 function onTouchStart(index: number, event: TouchEvent): void {
   const touch = event.touches[0]
