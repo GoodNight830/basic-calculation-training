@@ -105,9 +105,14 @@ async function generateQuestions(
     excludeKeys.add(key)
   }
 
+  // 不支持薄弱点强化的模块（如正负运算）不注入强化目标
+  const weakTargets = mod.reinforcementSupported
+    ? reinforcementTargets(weakPatterns, weakConfig)
+    : []
+
   return mod.generator.generate({
     count,
-    weakTargets: reinforcementTargets(weakPatterns, weakConfig),
+    weakTargets,
     maxWeakRatio: weakConfig?.maxReinforcementRatio,
     excludeKeys
   })
