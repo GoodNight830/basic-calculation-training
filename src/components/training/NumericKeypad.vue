@@ -78,6 +78,7 @@ const pressBackspace = (): void => guarded(() => emit('backspace'))
 const pressClear = (): void => guarded(() => emit('clear'))
 const pressRestart = (): void => guarded(() => emit('restart'))
 const pressSubmit = (): void => guarded(() => emit('submit'))
+const pressToggleSign = (): void => guarded(() => emit('toggleSign'))
 </script>
 
 <template>
