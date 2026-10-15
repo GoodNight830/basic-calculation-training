@@ -59,19 +59,6 @@ const progressLabel = computed(() => {
   return `第 ${trainingStore.answeredCount + 1} 题`
 })
 
-/** 等级用时速查（与 §10.1 保持一致，阈值取自配置，不写死） */
-const legendTitle = computed(() =>
-  isSpeedMode.value ? `${trainingStore.questionCount}题用时` : '全对时用时'
-)
-const legendItems = computed(() => [
-  { label: '合格', seconds: GRADE_THRESHOLDS_MS.pass / 1000 },
-  { label: '良好', seconds: GRADE_THRESHOLDS_MS.good / 1000 },
-  { label: '优秀', seconds: GRADE_THRESHOLDS_MS.excellent / 1000 }
-])
-
-const questionTimerLabel = computed(() => formatMs(trainingStore.liveElapsedMs))
-const totalTimerLabel = computed(() => formatDuration(trainingStore.totalElapsedMs))
-
 let autoContinueHandle: ReturnType<typeof setTimeout> | null = null
 let restartNoticeHandle: ReturnType<typeof setTimeout> | null = null
 
