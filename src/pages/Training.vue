@@ -269,6 +269,7 @@ onBeforeRouteLeave(() => {
         <FeedbackPanel
           v-else-if="awaitingContinue && feedback"
           :check="feedback"
+          :module="trainingStore.active?.module"
           @continue="continueNext"
         />
 
