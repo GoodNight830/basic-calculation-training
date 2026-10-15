@@ -17,6 +17,7 @@ import { gradeDescription, gradeLabel } from '@/services/grading'
 import { formatDuration, formatMs, formatPercent } from '@/services/format'
 import { formatErrorRate, formatNumber } from '@/modules/arithmetic/five-divide-three/calculator'
 import { maybeAutoAnalyze } from '@/services/queries'
+import { MODULE_SIGNED_ADD_SUB } from '@/config/trainingConfig'
 import type { QuestionRecord } from '@/types'
 
 const props = defineProps<{ sessionId: string }>()
