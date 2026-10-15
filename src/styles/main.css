@@ -469,17 +469,6 @@ button {
   flex: 1;
 }
 
-.category-move {
-  display: flex;
-  gap: 4px;
-  opacity: 0.35;
-  transition: opacity 0.12s ease;
-}
-
-.category-card:hover .category-move {
-  opacity: 1;
-}
-
 /* 视图切换按钮激活态 */
 .view-active {
   color: var(--color-primary-dark) !important;
