@@ -28,6 +28,8 @@ import type { LocalDiagnosis, AiAnalysisSnapshot, Bookmark } from '@/types'
 import { scheduleHostSync } from './hostSync'
 import { newId } from '@/utils/id'
 import * as bookmarksRepo from '@/db/bookmarks'
+import { requestAiReport, PROMPT_VERSION } from './aiAnalysis'
+import * as settingsRepo from '@/db/settings'
 
 export interface Overview {
   today: StatsSummary
@@ -192,6 +194,62 @@ export async function loadDiagnosis(module: string = MODULE_FIVE_DIVIDE_THREE): 
     }),
     latestAi,
     aiHistory
+  }
+}
+
+/**
+ * 自动分析（§16.1 / §34）：训练完成后按 AI 设置的 autoAnalysis 策略判断是否自动生成报告。
+ *
+ * 触发条件（三者都满足时自动分析一次）：
+ * - 已启用 AI 解读且同意上传、已配置模型
+ * - autoAnalysis 非 off（after_30_questions / daily / weekly）
+ * - 自上次 AI 报告以来新增题目数 >= 30
+ * - daily / weekly 还需满足距上次报告的时间间隔（每天最多一次 / 每周最多一次）
+ *
+ * 返回是否真正触发了分析。分析失败不抛出（静默降级到手动分析）。
+ */
+export async function maybeAutoAnalyze(module: string = MODULE_FIVE_DIVIDE_THREE): Promise<boolean> {
+  const settings = await settingsRepo.getSettings()
+  const ai = settings.ai
+  if (!ai.enabled || !ai.consentToUpload || !ai.model || ai.autoAnalysis === 'off') return false
+
+  const [analysis, latestAi] = await Promise.all([
+    loadSessionAnalysisData(module),
+    aiSnapshotsRepo.latestAiAnalysis(module)
+  ])
+  const diagnosis = buildLocalDiagnosis(analysis.records, module, {
+    lastAiQuestionCount: latestAi?.questionCount ?? 0
+  })
+  if (diagnosis.questionCountSinceLastAi < 30) return false
+  if (latestAi && latestAi.dataHash === diagnosis.dataHash) return false
+
+  const DAY = 86_400_000
+  if (latestAi) {
+    const lastMs = Date.parse(latestAi.createdAt)
+    if (Number.isFinite(lastMs)) {
+      const elapsed = Date.now() - lastMs
+      if (ai.autoAnalysis === 'daily' && elapsed < DAY) return false
+      if (ai.autoAnalysis === 'weekly' && elapsed < 7 * DAY) return false
+    }
+  }
+
+  try {
+    const report = await requestAiReport(ai, diagnosis)
+    const snapshot: AiAnalysisSnapshot = {
+      id: newId(),
+      module,
+      createdAt: new Date().toISOString(),
+      dataHash: diagnosis.dataHash,
+      questionCount: diagnosis.lifetime.sampleCount,
+      model: ai.model,
+      promptVersion: PROMPT_VERSION,
+      report
+    }
+    await aiSnapshotsRepo.saveAiAnalysis(snapshot)
+    scheduleHostSync()
+    return true
+  } catch {
+    return false
   }
 }
 
