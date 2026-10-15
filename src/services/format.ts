@@ -23,14 +23,15 @@ export function formatMs(ms: number | null): string {
   return `${formatSeconds(ms)}s`
 }
 
-/** 毫秒 → "58.4 秒" / "1 分 02 秒" */
+/** 毫秒 → "58.4秒" / "1分02秒"（紧凑，避免移动端换行） */
 export function formatDuration(ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return '—'
   const totalSeconds = ms / 1000
-  if (totalSeconds < 60) return `${totalSeconds.toFixed(1)} 秒`
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(1)}秒`
   const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds - minutes * 60
-  return `${minutes} 分 ${seconds.toFixed(1).padStart(4, '0')} 秒`
+  const seconds = Math.round(totalSeconds - minutes * 60)
+  const secText = seconds.toString().padStart(2, '0')
+  return `${minutes}分${secText}秒`
 }
 
 /** ISO → "2026-09-23" */
