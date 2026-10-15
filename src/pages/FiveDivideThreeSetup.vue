@@ -15,6 +15,7 @@ import { useTrainingStore } from '@/app/stores/training'
 import { useWeakPatternStore } from '@/app/stores/weakPatterns'
 import { loadWrongQuestions } from '@/services/queries'
 import { formatPercent } from '@/services/format'
+import { MODULE_FIVE_DIVIDE_THREE } from '@/config/trainingConfig'
 import type { TrainingMode, WrongQuestion } from '@/types'
 
 const router = useRouter()
