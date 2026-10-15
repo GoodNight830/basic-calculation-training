@@ -250,6 +250,7 @@ onMounted(() => void reload())
             上次报告 {{ formatDateTime(previousAi.createdAt) }} · 本次较上次新增 {{ questionDelta ?? 0 }} 题，累计 {{ aiHistory.length }} 份报告。
           </div>
           <div v-else class="text-xs text-muted" style="margin-top:12px">这是第一份 AI 报告。</div>
+          </template>
         </template>
         <p v-else class="text-sm text-muted">尚未生成 AI 报告。本地诊断无需模型即可使用。</p>
         <div class="btn-row" style="margin-top:12px">
