@@ -1040,14 +1040,6 @@ button {
   font-size: 0.8125rem;
 }
 
-.training-legend {
-  color: var(--color-muted);
-  font-size: 0.75rem;
-}
-
-.training-legend-item {
-  margin-left: 8px;
-}
 
 /* 屏幕较矮时（横屏、小屏手机）自动收紧，保证题目与键盘同屏 */
 @media (max-height: 780px) {
