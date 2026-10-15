@@ -45,6 +45,13 @@ const questionDelta = computed(() => {
   return latestAi.value.questionCount - previousAi.value.questionCount
 })
 
+/** 展开中的历史报告 id（用于历史列表内联查看） */
+const expandedHistoryId = ref<string | null>(null)
+
+function toggleHistory(id: string): void {
+  expandedHistoryId.value = expandedHistoryId.value === id ? null : id
+}
+
 function confidenceLabel(value: DiagnosisRange['confidence']): string {
   return { insufficient: '数据不足', low: '低', medium: '中', high: '高' }[value]
 }
