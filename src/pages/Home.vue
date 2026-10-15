@@ -249,10 +249,6 @@ onMounted(async () => {
           <span v-if="!category.available" class="badge badge-muted">敬请期待</span>
         </div>
         <div class="category-desc">{{ category.description }}</div>
-        <div class="category-move" @click.stop>
-          <button type="button" class="btn btn-ghost btn-sm" :disabled="index === 0" @click="move(index, -1)">↑</button>
-          <button type="button" class="btn btn-ghost btn-sm" :disabled="index === categories.length - 1" @click="move(index, 1)">↓</button>
-        </div>
       </div>
     </div>
 
