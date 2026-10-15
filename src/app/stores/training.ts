@@ -115,7 +115,9 @@ export const useTrainingStore = defineStore('training', () => {
     busy.value = true
     errorMessage.value = ''
     try {
-      if (weakStore.patterns.length === 0) {
+      // 不支持薄弱点强化的模块（如正负运算）跳过薄弱点加载
+      const reinforcementSupported = getArithmeticModule(module).reinforcementSupported
+      if (reinforcementSupported && weakStore.patterns.length === 0) {
         await weakStore.load(module)
       }
 
