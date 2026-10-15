@@ -9,7 +9,7 @@
  */
 
 import { normalizeAnswerInput } from '@/modules/arithmetic/five-divide-three/validator'
-import type { Ref } from 'vue'
+import { unref, type Ref } from 'vue'
 
 /** 整数部分最多 7 位，小数部分最多 3 位 */
 export const ANSWER_MAX_INT_DIGITS = 7
