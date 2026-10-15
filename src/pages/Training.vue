@@ -33,7 +33,10 @@ const submitting = ref(false)
 const briefCorrect = ref(false)
 const restartNotice = ref(false)
 
-const { pressKey, backspace, clear } = useAnswerInput(answer)
+/** 当前是否为正负运算模块（整数精确作答，无误差容忍） */
+const isSignedModule = computed(() => trainingStore.active?.module === MODULE_SIGNED_ADD_SUB)
+
+const { pressKey, backspace, clear, toggleSign } = useAnswerInput(answer, isSignedModule)
 
 const question = computed(() => trainingStore.question)
 const isTrainingMode = computed(() => trainingStore.isTraining)
@@ -42,9 +45,6 @@ const awaitingContinue = computed(() => trainingStore.awaitingContinue)
 const feedback = computed(() => trainingStore.feedback)
 const allowedErrorRate = computed(() => trainingStore.active?.allowedErrorRate ?? 3)
 const inputLocked = computed(() => submitting.value || !question.value || awaitingContinue.value)
-
-/** 当前是否为正负运算模块（整数精确作答，无误差容忍） */
-const isSignedModule = computed(() => trainingStore.active?.module === MODULE_SIGNED_ADD_SUB)
 
 /** 正确答案展示：正负运算显示整数，五除三显示两位小数 */
 const correctAnswerLabel = computed(() => {
