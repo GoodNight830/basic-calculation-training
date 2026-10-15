@@ -114,11 +114,11 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- AI 解读入口 -->
+      <!-- AI 解读入口：AI 已独立成页，此处仅提供跳转，自动带上当前模块 -->
       <section class="section card">
-        <div class="row-between"><div><h2 class="card-title">AI 解读</h2><p class="card-subtitle">用自然语言解释你的薄弱范围，并给出训练计划</p></div></div>
+        <div class="row-between"><div><h2 class="card-title">AI 智能解读</h2><p class="card-subtitle">用自然语言解释薄弱范围，并给出训练计划（独立页面）</p></div></div>
         <div class="btn-row" style="margin-top:12px">
-          <button class="btn btn-primary" type="button" @click="goAi">生成 AI 报告</button>
+          <button class="btn btn-primary" type="button" @click="goAi">进入 AI 解读</button>
           <button v-if="!canAnalyze" class="btn btn-outline" type="button" @click="router.push({ name: 'settings', hash: '#ai-settings' })">配置 AI 服务</button>
         </div>
       </section>
