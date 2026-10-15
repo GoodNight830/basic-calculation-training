@@ -238,11 +238,11 @@ onMounted(() => {
       </section>
 
       <section v-if="aiHistory.length" class="section">
-        <button type="button" class="row-between card-interactive" style="background:none;border:none;padding:0;cursor:pointer;width:100%" @click="historyExpanded = !historyExpanded">
-          <h2 class="section-title" style="margin:0">历史报告</h2>
-          <span class="text-xs text-muted">{{ historyExpanded ? '收起 ▴' : '共 ' + aiHistory.length + ' 份 · 查看 ▾' }}</span>
+        <button type="button" class="collapse-header" @click="historyExpanded = !historyExpanded">
+          <span class="collapse-title">历史报告</span>
+          <span class="collapse-meta">{{ aiHistory.length }} 份 <span class="collapse-chevron" :class="{ open: historyExpanded }" style="display:inline-block;margin-left:6px" /></span>
         </button>
-        <template v-if="historyExpanded">
+        <div v-if="historyExpanded" class="collapse-content">
           <div class="list" style="margin-top:12px">
             <div v-for="snapshot in aiHistory" :key="snapshot.id" class="list-item" style="align-items:flex-start">
               <button type="button" class="list-item-main card-interactive" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;width:100%" @click="toggleHistory(snapshot.id)">
