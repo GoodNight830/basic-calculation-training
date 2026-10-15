@@ -226,7 +226,7 @@ onMounted(async () => {
       </section>
 
       <!-- 训练记录 -->
-      <section class="section">
+      <section class="section" id="training-history">
         <div class="row-between">
           <h2 class="section-title" style="margin: 0">训练记录</h2>
         </div>
