@@ -199,7 +199,7 @@ onMounted(load)
           {{ topic.title }}
         </button>
       </div>
-      <p class="field-hint" style="margin-top: 8px">灰色题型即将上线，当前版本先开放五位数 ÷ 三位数。</p>
+      <p class="field-hint" style="margin-top: 8px">灰色题型即将上线，当前已开放五位数 ÷ 三位数与正负运算。</p>
     </div>
 
     <div class="section">
