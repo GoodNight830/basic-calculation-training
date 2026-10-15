@@ -226,12 +226,13 @@ onMounted(load)
             <span class="text-sm text-muted">未掌握 {{ unmasteredWrongCount }} 题</span>
           </span>
         </button>
-        <button type="button" class="list-item card-interactive" @click="router.push({ name: 'profile' })">
+        <button type="button" class="list-item card-interactive" @click="router.push({ name: 'profile', query: { module: MODULE_FIVE_DIVIDE_THREE } })">
           <span class="list-item-main">
             <span class="bold">📈 训练记录</span>
             <span class="text-sm text-muted">历史统计与每日趋势</span>
           </span>
         </button>
+
         <button type="button" class="list-item card-interactive" @click="router.push({ name: 'weak' })">
           <span class="list-item-main">
             <span class="bold">🎯 薄弱点</span>
