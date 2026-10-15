@@ -209,6 +209,10 @@ export async function loadDiagnosis(module: string = MODULE_FIVE_DIVIDE_THREE): 
  * 返回是否真正触发了分析。分析失败不抛出（静默降级到手动分析）。
  */
 export async function maybeAutoAnalyze(module: string = MODULE_FIVE_DIVIDE_THREE): Promise<boolean> {
+  // 不支持 AI 的模块（如正负运算）不触发自动分析
+  const mod = findArithmeticModule(module)
+  if (!mod || !mod.meta.aiSupported) return false
+
   const settings = await settingsRepo.getSettings()
   const ai = settings.ai
   if (!ai.enabled || !ai.consentToUpload || !ai.model || ai.autoAnalysis === 'off') return false
