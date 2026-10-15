@@ -62,13 +62,15 @@ export function backspaceAnswer(current: string): string {
   return current.slice(0, -1)
 }
 
-export function useAnswerInput(value: Ref<string>, allowNegative = false) {
+export function useAnswerInput(value: Ref<string>, allowNegative: Ref<boolean> | boolean = false) {
+  const signed = () => unref(allowNegative)
+
   function setFromInput(raw: string): void {
-    value.value = sanitizeAnswerInput(raw, allowNegative)
+    value.value = sanitizeAnswerInput(raw, signed())
   }
 
   function pressKey(key: string): void {
-    value.value = appendAnswerKey(value.value, key, allowNegative)
+    value.value = appendAnswerKey(value.value, key, signed())
   }
 
   function toggleSign(): void {
