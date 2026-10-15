@@ -109,6 +109,11 @@ const pieSegments = computed(() => {
 })
 
 function piePath(start: number, end: number, r: number): string {
+  // 单个模块占比 100%（或角度 >= 360）时，起点终点重合会让 SVG 弧退化为空，
+  // 此时直接画整圆（两段半圆弧拼合），避免饼状图空白。
+  if (end - start >= 360) {
+    return `M 100 ${100 - r} A ${r} ${r} 0 1 1 100 ${100 + r} A ${r} ${r} 0 1 1 100 ${100 - r} Z`
+  }
   const a = ((start - 90) * Math.PI) / 180
   const b = ((end - 90) * Math.PI) / 180
   const x1 = 100 + r * Math.cos(a)
