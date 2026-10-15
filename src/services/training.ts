@@ -11,7 +11,7 @@
  */
 
 import { QUESTION_COUNT, type WeakPatternConfig } from '@/config/trainingConfig'
-import { getArithmeticModule } from '@/modules/arithmetic/registry'
+import { findArithmeticModule, getArithmeticModule } from '@/modules/arithmetic/registry'
 import { buildQuestionText, exactQuotient } from '@/modules/arithmetic/five-divide-three/calculator'
 import {
   analyzeWeakPatterns,
