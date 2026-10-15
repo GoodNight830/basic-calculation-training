@@ -8,7 +8,8 @@
  *
  * 数据一律通过 @/services/queries 读取，不直接访问 IndexedDB（§34）。
  */
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import StatCard from '@/components/common/StatCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import GradeBadge from '@/components/common/GradeBadge.vue'
