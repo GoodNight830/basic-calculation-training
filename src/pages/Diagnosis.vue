@@ -185,17 +185,12 @@ onMounted(() => void reload())
     </EmptyState>
     <template v-else>
       <section class="section">
-        <h2 class="section-title">整体表现</h2>
-        <div class="stat-grid">
-          <StatCard label="长期正确率" :value="formatPercent(diagnosis.lifetime.accuracy)" :hint="`${diagnosis.lifetime.sampleCount} 题`" />
-          <StatCard label="最近30天" :value="formatPercent(diagnosis.recent30.accuracy)" :hint="`${diagnosis.recent30.sampleCount} 题`" />
-          <StatCard label="最近7天" :value="formatPercent(diagnosis.recent7.accuracy)" :hint="`${diagnosis.recent7.sampleCount} 题`" />
-          <StatCard label="近期中位用时" :value="diagnosis.recent7.medianElapsedMs === null ? '—' : formatMs(diagnosis.recent7.medianElapsedMs)" />
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="row-between"><h2 class="section-title" style="margin:0">当前重点</h2><span class="text-xs text-muted">最近7天样本至少10题才下结论</span></div>
+        <button type="button" class="row-between card-interactive" style="background:none;border:none;padding:0;cursor:pointer;width:100%" @click="focusExpanded = !focusExpanded">
+          <h2 class="section-title" style="margin:0">薄弱范围</h2>
+          <span class="text-xs text-muted">{{ focusExpanded ? '收起 ▴' : '查看 ▾' }}</span>
+        </button>
+        <template v-if="focusExpanded">
+          <p class="text-xs text-muted" style="margin-top:8px">最近7天样本至少10题才下结论</p>
         <div v-if="focusRanges.length" class="list" style="margin-top:12px">
           <div v-for="range in focusRanges" :key="range.rangeMin" class="list-item">
             <div class="list-item-main">
