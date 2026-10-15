@@ -25,6 +25,7 @@ import {
 } from '@/services/training'
 import { useSettingsStore } from './settings'
 import { useWeakPatternStore } from './weakPatterns'
+import { getArithmeticModule } from '@/modules/arithmetic/registry'
 import type { AnswerCheck } from '@/modules/arithmetic/five-divide-three/types'
 import type {
   ActiveSession,
