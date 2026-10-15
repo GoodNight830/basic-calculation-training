@@ -279,10 +279,6 @@ onMounted(async () => {
           </span>
           <span class="text-sm text-muted">{{ category.description }}</span>
         </button>
-        <div class="row" style="margin-top: 6px; gap: 6px">
-          <button type="button" class="btn btn-ghost btn-sm" :disabled="index === 0" @click="move(index, -1)">↑</button>
-          <button type="button" class="btn btn-ghost btn-sm" :disabled="index === categories.length - 1" @click="move(index, 1)">↓</button>
-        </div>
       </div>
     </div>
 
