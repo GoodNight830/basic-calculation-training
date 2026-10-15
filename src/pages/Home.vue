@@ -119,6 +119,69 @@ function move(index: number, delta: number): void {
   persistOrder()
 }
 
+/* ---- 移动端长按拖拽排序（touch） ---- */
+const LONG_PRESS_MS = 450
+const MOVE_THRESHOLD = 10
+const touchDragIndex = ref<number | null>(null)
+const touchDragging = ref(false)
+let touchTimer: ReturnType<typeof setTimeout> | null = null
+let touchStartX = 0
+let touchStartY = 0
+let touchActive = false
+
+function onTouchStart(index: number, event: TouchEvent): void {
+  const touch = event.touches[0]
+  if (!touch) return
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchActive = true
+  if (touchTimer) clearTimeout(touchTimer)
+  touchTimer = setTimeout(() => {
+    touchDragIndex.value = index
+    touchDragging.value = true
+  }, LONG_PRESS_MS)
+}
+
+function onTouchMove(event: TouchEvent): void {
+  const touch = event.touches[0]
+  if (!touch) return
+  if (!touchDragging.value) {
+    // 未进入拖拽态：位移超过阈值则取消长按（避免误触）
+    if (Math.abs(touch.clientX - touchStartX) > MOVE_THRESHOLD || Math.abs(touch.clientY - touchStartY) > MOVE_THRESHOLD) {
+      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null }
+      touchActive = false
+    }
+    return
+  }
+  // 已进入拖拽态：阻止页面滚动，按触摸点命中的卡片实时换位
+  event.preventDefault()
+  const from = touchDragIndex.value
+  if (from === null) return
+  const el = document.elementFromPoint(touch.clientX, touch.clientY)
+  const targetCard = el?.closest('[data-category-key]') as HTMLElement | null
+  if (!targetCard) return
+  const targetKey = targetCard.getAttribute('data-category-key')
+  const targetIndex = categories.value.findIndex((c) => c.key === targetKey)
+  if (targetIndex < 0 || targetIndex === from) return
+  const list = [...categories.value]
+  const [moved] = list.splice(from, 1)
+  list.splice(targetIndex, 0, moved)
+  categories.value = list
+  touchDragIndex.value = targetIndex
+}
+
+function onTouchEnd(): void {
+  if (touchTimer) { clearTimeout(touchTimer); touchTimer = null }
+  if (touchDragging.value) persistOrder()
+  touchDragging.value = false
+  touchDragIndex.value = null
+  touchActive = false
+}
+
+function onTouchCancel(): void {
+  onTouchEnd()
+}
+
 onMounted(async () => {
   categories.value = loadOrder()
   try {
