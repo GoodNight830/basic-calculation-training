@@ -58,8 +58,8 @@ export class SignedAddSubGenerator implements QuestionGenerator {
     for (let attempt = 0; attempt < MAX_DEDUPE_ATTEMPTS; attempt += 1) {
       const combo = VALID_COMBINATIONS[randomInt(0, VALID_COMBINATIONS.length - 1, rng)]
       op = combo.op
-      const absA = randomInt(1, 99, rng)
-      const absB = randomInt(1, 99, rng)
+      const absA = randomInt(ABS_MIN, ABS_MAX, rng)
+      const absB = randomInt(ABS_MIN, ABS_MAX, rng)
       a = combo.aSign * absA
       b = combo.bSign * absB
       if (!usedKeys.has(questionKey(a, b))) break
