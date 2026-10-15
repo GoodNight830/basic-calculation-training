@@ -43,6 +43,16 @@ const feedback = computed(() => trainingStore.feedback)
 const allowedErrorRate = computed(() => trainingStore.active?.allowedErrorRate ?? 3)
 const inputLocked = computed(() => submitting.value || !question.value || awaitingContinue.value)
 
+/** 当前是否为正负运算模块（整数精确作答，无误差容忍） */
+const isSignedModule = computed(() => trainingStore.active?.module === MODULE_SIGNED_ADD_SUB)
+
+/** 正确答案展示：正负运算显示整数，五除三显示两位小数 */
+const correctAnswerLabel = computed(() => {
+  const value = feedback.value?.correctAnswer
+  if (value === null || value === undefined) return '—'
+  return isSignedModule.value ? String(value) : formatNumber(value)
+})
+
 const progressLabel = computed(() => {
   if (isSpeedMode.value) {
     const current = Math.min(trainingStore.answeredCount + 1, trainingStore.questionCount)
