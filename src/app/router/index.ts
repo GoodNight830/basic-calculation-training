@@ -44,6 +44,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '五位数÷三位数' }
   },
   {
+    path: '/signed-add-sub',
+    name: 'signed-add-sub',
+    component: () => import('@/pages/SignedAddSubSetup.vue'),
+    meta: { title: '正负运算' }
+  },
+  {
     path: '/training',
     name: 'training',
     component: () => import('@/pages/Training.vue'),
