@@ -62,6 +62,7 @@ interface Topic {
 
 const topics: Topic[] = [
   { key: 'five-divide-three', title: '五位数÷三位数', available: true },
+  { key: 'signed-add-sub', title: '正负运算', available: true },
   { key: 'three-add', title: '三位数加法', available: false },
   { key: 'three-sub', title: '三位数减法', available: false },
   { key: 'three-add-sub', title: '三位数加减', available: false },
@@ -74,6 +75,10 @@ const topics: Topic[] = [
 
 function openTopic(topic: Topic): void {
   if (!topic.available) return
+  if (topic.key === 'signed-add-sub') {
+    void router.push({ name: 'signed-add-sub' })
+    return
+  }
   void router.push({ name: 'five-divide-three', query: { module: MODULE_FIVE_DIVIDE_THREE } })
 }
 
