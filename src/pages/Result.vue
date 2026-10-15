@@ -172,9 +172,9 @@ async function restartSameMode(): Promise<void> {
               </span>
             </div>
             <div v-if="!record.correct" class="list-item-meta mono">
-              <div>你的答案：{{ formatNumber(record.userAnswer) }}</div>
-              <div>正确答案：{{ formatNumber(record.correctAnswer) }}</div>
-              <div>误差：{{ formatErrorRate(record.errorRate) }}</div>
+              <div>你的答案：{{ answerLabel(record.userAnswer) }}</div>
+              <div>正确答案：{{ answerLabel(record.correctAnswer) }}</div>
+              <div v-if="!isSignedModule">误差：{{ formatErrorRate(record.errorRate) }}</div>
             </div>
             <div v-else-if="record.origin === 'weak'" class="list-item-meta">
               <span class="badge badge-warning">
