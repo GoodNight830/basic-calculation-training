@@ -231,6 +231,7 @@ onBeforeRouteLeave(() => {
           v-model="answer"
           :disabled="inputLocked"
           :autofocus="!awaitingContinue"
+          :allow-negative="isSignedModule"
           @submit="submitAnswer"
         />
 
