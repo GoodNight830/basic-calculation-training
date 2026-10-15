@@ -12,7 +12,7 @@
 
 import { QUESTION_COUNT, type WeakPatternConfig } from '@/config/trainingConfig'
 import { findArithmeticModule, getArithmeticModule } from '@/modules/arithmetic/registry'
-import { buildQuestionText, exactQuotient } from '@/modules/arithmetic/five-divide-three/calculator'
+import { buildQuestionText } from '@/modules/arithmetic/five-divide-three/calculator'
 import {
   analyzeWeakPatterns,
   divisorRangeOf,
