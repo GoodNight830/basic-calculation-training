@@ -16,6 +16,7 @@ import BookmarkButton from '@/components/common/BookmarkButton.vue'
 import { gradeDescription, gradeLabel } from '@/services/grading'
 import { formatDuration, formatMs, formatPercent } from '@/services/format'
 import { formatErrorRate, formatNumber } from '@/modules/arithmetic/five-divide-three/calculator'
+import { maybeAutoAnalyze } from '@/services/queries'
 import type { QuestionRecord } from '@/types'
 
 const props = defineProps<{ sessionId: string }>()
@@ -69,6 +70,8 @@ onMounted(async () => {
     if (!loaded) notFound.value = true
   }
   loading.value = false
+  // 训练结算后按 AI 自动分析策略判断是否自动生成报告（静默，不阻塞结算页）
+  if (session.value) void maybeAutoAnalyze(session.value.module)
 })
 
 async function restartSameMode(): Promise<void> {
