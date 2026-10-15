@@ -34,6 +34,13 @@ const showRestartDialog = ref(false)
 const session = computed(() => trainingStore.lastResult)
 const records = computed<QuestionRecord[]>(() => trainingStore.lastRecords)
 const isSpeed = computed(() => session.value?.mode === 'speed')
+const isSignedModule = computed(() => session.value?.module === MODULE_SIGNED_ADD_SUB)
+
+/** 答案展示：正负运算显示整数，五除三显示两位小数 */
+function answerLabel(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—'
+  return isSignedModule.value ? String(value) : formatNumber(value)
+}
 
 const wrongRecords = computed(() => records.value.filter((r) => !r.correct))
 const accuracy = computed(() => {
