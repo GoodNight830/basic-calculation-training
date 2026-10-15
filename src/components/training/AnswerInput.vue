@@ -18,11 +18,14 @@ const props = withDefaults(
     disabled?: boolean
     autofocus?: boolean
     placeholder?: string
+    /** 是否允许输入负数（正负运算模块） */
+    allowNegative?: boolean
   }>(),
   {
     disabled: false,
     autofocus: true,
-    placeholder: '计算结果'
+    placeholder: '计算结果',
+    allowNegative: false
   }
 )
 
@@ -35,7 +38,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 
 function onInput(event: Event): void {
   const target = event.target as HTMLInputElement
-  const sanitized = sanitizeAnswerInput(target.value)
+  const sanitized = sanitizeAnswerInput(target.value, props.allowNegative)
   if (sanitized !== target.value) target.value = sanitized
   emit('update:modelValue', sanitized)
 }
