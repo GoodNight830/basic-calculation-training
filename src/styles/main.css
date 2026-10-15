@@ -485,6 +485,67 @@ button {
   flex-shrink: 0;
 }
 
+/* ---------- 折叠区块（诊断/AI/个人数据页的统一「查看/收起」交互） ---------- */
+
+/* 折叠头：整行可点，无边框凸起，仅 hover 轻微加深背景 */
+.collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 0 -12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.collapse-header:hover {
+  background: var(--color-bg);
+}
+
+.collapse-header:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.collapse-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.collapse-meta {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+/* chevron 图标：用 CSS 绘制，展开/收起带旋转过渡 */
+.collapse-chevron {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--color-muted);
+  border-bottom: 2px solid var(--color-muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.collapse-chevron.open {
+  transform: rotate(225deg);
+}
+
+/* 折叠内容：展开/收起带淡入淡出 */
+.collapse-content {
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+
 /* 收藏按钮高亮 */
 .btn.bookmarked {
   color: var(--color-warning);
