@@ -172,7 +172,6 @@ function onTouchEnd(): void {
   if (touchDragging.value) persistOrder()
   touchDragging.value = false
   touchDragIndex.value = null
-  touchActive = false
 }
 
 function onTouchCancel(): void {
