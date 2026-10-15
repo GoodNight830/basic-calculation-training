@@ -133,7 +133,6 @@ function onTouchStart(index: number, event: TouchEvent): void {
   if (!touch) return
   touchStartX = touch.clientX
   touchStartY = touch.clientY
-  touchActive = true
   if (touchTimer) clearTimeout(touchTimer)
   touchTimer = setTimeout(() => {
     touchDragIndex.value = index
