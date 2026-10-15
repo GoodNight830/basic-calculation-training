@@ -119,16 +119,19 @@ async function generateQuestions(
 }
 
 function cloneAsRetryQuestion(question: WrongQuestion): GeneratedQuestion {
+  const mod = findArithmeticModule(question.module)
+  const reinforcementSupported = mod?.reinforcementSupported ?? false
   const { min, max } = divisorRangeOf(question.divisor, 100)
   return {
     id: newId(),
     module: question.module,
     dividend: question.dividend,
     divisor: question.divisor,
-    correctAnswer: exactQuotient(question.dividend, question.divisor),
+    // 直接用错题记录里已保存的正确答案（§20），避免对正负运算等模块误用除法重算
+    correctAnswer: question.correctAnswer,
     text: question.question || buildQuestionText(question.dividend, question.divisor),
     origin: 'weak',
-    weakRange: { min, max },
+    weakRange: reinforcementSupported ? { min, max } : null,
     createdAt: nowIso()
   }
 }
