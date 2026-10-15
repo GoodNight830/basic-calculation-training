@@ -237,16 +237,7 @@ onBeforeRouteLeave(() => {
 
         <div class="training-meta">
           <span v-if="isSignedModule">精确作答</span>
-          <span v-else>允许误差：±{{ allowedErrorRate }}%</span>
-          <span>本题用时 {{ questionTimerLabel }}</span>
-          <span>总计 {{ totalTimerLabel }}</span>
-        </div>
-
-        <div class="training-legend">
-          〖{{ legendTitle }}〗
-          <span v-for="item in legendItems" :key="item.label" class="training-legend-item">
-            {{ item.label }}：{{ item.seconds }}S
-          </span>
+          <span v-else>允许误差 ±{{ allowedErrorRate }}%</span>
         </div>
       </div>
 
