@@ -3,7 +3,7 @@
  * 个人数据页（信息架构 v3）：
  * - 概览卡（图标化）：总题数 / 训练组 / 正确率 / 收藏 / 错题 / 已掌握
  * - 模块分布饼状图：自动读取所有有做题记录的模块
- * - 训练记录：模块下拉 + 时间范围 + 按天分组，可展开到题目级（支持收藏/笔记）
+ * - 训练记录：模块下拉 + 日期筛选 + 时间范围 + 按天分组分页，可展开到题目级
  * - 收藏列表：已收藏题目与笔记
  *
  * 数据一律通过 @/services/queries 读取，不直接访问 IndexedDB（§34）。
@@ -38,6 +38,8 @@ import type { QuestionRecord, Bookmark } from '@/types'
 const RANGE_KEYS: readonly TimeRange[] = ['today', '7d', '30d', 'all']
 /** 饼状图配色（按模块顺序取用） */
 const PIE_COLORS = ['#4f7cff', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b']
+/** 训练记录每次加载的天数（分页） */
+const PAGE_SIZE = 7
 
 const route = useRoute()
 const loading = ref(true)
@@ -46,6 +48,10 @@ const history = ref<HistoryData | null>(null)
 const historyLoading = ref(false)
 const moduleFilter = ref<string>('')
 const range = ref<TimeRange>('7d')
+/** 日期筛选：'' 表示全部日期 */
+const dateFilter = ref<string>('')
+/** 已展示的天数（分页游标） */
+const visibleDays = ref(PAGE_SIZE)
 const expandedSession = ref<string | null>(null)
 const sessionRecords = ref<Record<string, QuestionRecord[]>>({})
 const bookmarks = ref<Bookmark[]>([])
@@ -54,8 +60,21 @@ const errorText = ref('')
 const total = computed(() => profile.value?.total ?? null)
 const modules = computed<ModuleStat[]>(() => profile.value?.modules ?? [])
 const summary = computed(() => history.value?.summary ?? null)
-const daily = computed(() => history.value?.daily ?? [])
-const hasRecords = computed(() => daily.value.length > 0)
+/** 按天分组的全部记录（倒序） */
+const allDaily = computed(() => history.value?.daily ?? [])
+/** 日期筛选后按天分组的数据 */
+const filteredDaily = computed(() => {
+  if (!dateFilter.value) return allDaily.value
+  return allDaily.value.filter((d) => d.date === dateFilter.value)
+})
+/** 分页后实际展示的天 */
+const visibleDaily = computed(() => filteredDaily.value.slice(0, visibleDays.value))
+/** 是否还有更多可加载 */
+const hasMore = computed(() => visibleDays.value < filteredDaily.value.length)
+const hasRecords = computed(() => filteredDaily.value.length > 0)
+
+/** 日期筛选选项：全部日期 + 有记录的日期（倒序） */
+const dateOptions = computed(() => allDaily.value.map((d) => d.date))
 
 /** 模块下拉选项：全部 + 各模块 */
 const moduleOptions = computed(() => {
@@ -90,7 +109,6 @@ const pieSegments = computed(() => {
 })
 
 function piePath(start: number, end: number, r: number): string {
-  // 从圆心出发的扇区路径
   const a = ((start - 90) * Math.PI) / 180
   const b = ((end - 90) * Math.PI) / 180
   const x1 = 100 + r * Math.cos(a)
@@ -116,9 +134,16 @@ async function reloadHistory(): Promise<void> {
   try {
     history.value = await loadHistory(range.value, moduleFilter.value || undefined)
     expandedSession.value = null
+    // 切换范围/模块后重置日期筛选与分页
+    dateFilter.value = ''
+    visibleDays.value = PAGE_SIZE
   } finally {
     historyLoading.value = false
   }
+}
+
+function loadMore(): void {
+  visibleDays.value += PAGE_SIZE
 }
 
 async function toggleSession(sessionId: string): Promise<void> {
@@ -139,6 +164,11 @@ function selectModule(value: string): void {
 function selectRange(key: TimeRange): void {
   if (range.value === key) return
   range.value = key
+}
+
+function selectDate(value: string): void {
+  dateFilter.value = value
+  visibleDays.value = PAGE_SIZE
 }
 
 function modeLabel(mode: 'training' | 'speed'): string {
@@ -227,18 +257,25 @@ onMounted(async () => {
 
       <!-- 训练记录 -->
       <section class="section" id="training-history">
-        <div class="row-between">
-          <h2 class="section-title" style="margin: 0">训练记录</h2>
+        <h2 class="section-title">训练记录</h2>
+
+        <div class="row-wrap" style="display: flex; gap: 8px; margin-bottom: 10px">
+          <div class="field" style="flex: 1; min-width: 120px; margin: 0">
+            <label class="field-label" for="profile-module">模块</label>
+            <select id="profile-module" class="select" :value="moduleFilter" @change="selectModule(($event.target as HTMLSelectElement).value)">
+              <option v-for="opt in moduleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="field" style="flex: 1; min-width: 120px; margin: 0">
+            <label class="field-label" for="profile-date">日期</label>
+            <select id="profile-date" class="select" :value="dateFilter" @change="selectDate(($event.target as HTMLSelectElement).value)">
+              <option value="">全部日期</option>
+              <option v-for="d in dateOptions" :key="d" :value="d">{{ relativeDayLabel(d) }}</option>
+            </select>
+          </div>
         </div>
 
-        <div class="field" style="margin-top: 10px">
-          <label class="field-label" for="profile-module">模块</label>
-          <select id="profile-module" class="select" :value="moduleFilter" @change="selectModule(($event.target as HTMLSelectElement).value)">
-            <option v-for="opt in moduleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-          </select>
-        </div>
-
-        <div class="tabs" style="margin-top: 10px">
+        <div class="tabs">
           <button
             v-for="key in RANGE_KEYS"
             :key="key"
@@ -259,16 +296,14 @@ onMounted(async () => {
         />
 
         <template v-else>
-          <div class="section">
-            <div class="stat-grid">
-              <StatCard label="训练组数" :value="summary ? summary.sessionCount : '—'" />
-              <StatCard label="题目数" :value="summary ? summary.questionCount : '—'" />
-              <StatCard label="正确率" :value="summary && summary.questionCount ? formatPercent(summary.accuracy) : '—'" small />
-              <StatCard label="平均单题" :value="summary ? formatMs(summary.avgElapsedMs) : '—'" small />
-            </div>
+          <div class="stat-grid" style="margin-bottom: 14px">
+            <StatCard label="训练组数" :value="summary ? summary.sessionCount : '—'" />
+            <StatCard label="题目数" :value="summary ? summary.questionCount : '—'" />
+            <StatCard label="正确率" :value="summary && summary.questionCount ? formatPercent(summary.accuracy) : '—'" small />
+            <StatCard label="平均单题" :value="summary ? formatMs(summary.avgElapsedMs) : '—'" small />
           </div>
 
-          <div v-for="day in daily" :key="day.date" class="card section">
+          <div v-for="day in visibleDaily" :key="day.date" class="card section" style="margin-bottom: 12px">
             <div class="row-between">
               <span class="card-title">{{ relativeDayLabel(day.date) }}</span>
               <span class="text-xs text-muted mono">{{ day.date }}</span>
@@ -291,7 +326,7 @@ onMounted(async () => {
                   </span>
                   <span class="list-item-meta">
                     {{ modeLabel(session.mode) }} · {{ formatDateTime(session.startedAt) }}
-                    <span class="text-muted">{{ expandedSession === session.id ? ' ▴ 收起' : ' ▾ 展开题目' }}</span>
+                    <span class="collapse-chevron" :class="{ open: expandedSession === session.id }" style="display: inline-block; vertical-align: middle; margin-left: 6px" />
                   </span>
                 </button>
 
@@ -322,6 +357,11 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- 加载更多 -->
+          <div v-if="hasMore" class="text-center" style="margin-top: 4px">
+            <button type="button" class="btn btn-outline" @click="loadMore">加载更多（还有 {{ filteredDaily.length - visibleDays }} 天）</button>
           </div>
         </template>
       </section>
