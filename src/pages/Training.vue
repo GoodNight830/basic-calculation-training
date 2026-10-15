@@ -304,11 +304,13 @@ onBeforeRouteLeave(() => {
         <template v-else>
           <NumericKeypad
             :disabled="inputLocked"
+            :allow-negative="isSignedModule"
             @key="pressKey"
             @backspace="backspace"
             @clear="clear"
             @restart="restartQuestion"
             @submit="submitAnswer"
+            @toggle-sign="toggleSign"
           />
           <p class="text-xs text-muted training-keypad-hint" style="margin: 0">
             重开 = 清空并重新计时（不计入成绩） · 退格删除一位 · 确认提交
