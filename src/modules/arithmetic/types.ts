@@ -37,4 +37,8 @@ export interface ModuleMeta {
   subtitle: string
   description: string
   enabled: boolean
+  /** 是否支持本地能力诊断（薄弱范围/趋势分析） */
+  diagnosisSupported: boolean
+  /** 是否支持 AI 解读（需配置模型后可选） */
+  aiSupported: boolean
 }
