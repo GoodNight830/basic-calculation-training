@@ -153,7 +153,7 @@ onMounted(async () => {
   loading.value = true
   await reloadProfile()
   // 从路由 query 预选模块（例如从基础计算页「训练记录」入口跳入）
-  const preset = String(route.query.module ?? )
+  const preset = String(route.query.module ?? '')
   if (preset && modules.value.some((m) => m.module === preset)) {
     moduleFilter.value = preset
   }
@@ -162,7 +162,7 @@ onMounted(async () => {
   // 带预选模块进入时，定位到训练记录区块
   if (preset) {
     await nextTick()
-    document.getElementById(training-history)?.scrollIntoView({ behavior: smooth, block: start })
+    document.getElementById('training-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 })
 </script>
