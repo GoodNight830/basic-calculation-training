@@ -287,6 +287,7 @@ onMounted(() => void reload())
             </div>
           </div>
         </div>
+        </template>
       </section>
     </template>
 
