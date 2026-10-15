@@ -147,7 +147,6 @@ function onTouchMove(event: TouchEvent): void {
     // 未进入拖拽态：位移超过阈值则取消长按（避免误触）
     if (Math.abs(touch.clientX - touchStartX) > MOVE_THRESHOLD || Math.abs(touch.clientY - touchStartY) > MOVE_THRESHOLD) {
       if (touchTimer) { clearTimeout(touchTimer); touchTimer = null }
-      touchActive = false
     }
     return
   }
