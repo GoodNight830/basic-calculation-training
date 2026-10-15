@@ -30,6 +30,7 @@ import { newId } from '@/utils/id'
 import * as bookmarksRepo from '@/db/bookmarks'
 import { requestAiReport, PROMPT_VERSION } from './aiAnalysis'
 import * as settingsRepo from '@/db/settings'
+import { findArithmeticModule } from '@/modules/arithmetic/registry'
 
 export interface Overview {
   today: StatsSummary
