@@ -233,13 +233,19 @@ onMounted(async () => {
         v-for="(category, index) in categories"
         :key="category.key"
         class="category-card"
-        :class="{ 'category-card-disabled': !category.available, 'is-dragging': dragIndex === index }"
+        :class="{ 'category-card-disabled': !category.available, 'is-dragging': dragIndex === index, 'is-touch-dragging': touchDragIndex === index }"
         :draggable="true"
+        :data-category-key="category.key"
         @dragstart="onDragStart(index)"
         @dragover="onDragOver"
         @drop="onDrop(index)"
         @dragend="onDragEnd"
         @click="open(category)"
+        @touchstart="onTouchStart(index, $event)"
+        @touchmove.prevent="onTouchMove"
+        @touchend="onTouchEnd"
+        @touchcancel="onTouchCancel"
+
       >
         <div class="category-icon">{{ category.icon }}</div>
         <div class="category-title">
