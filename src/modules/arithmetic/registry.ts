@@ -36,6 +36,20 @@ export const arithmeticModules: ArithmeticModule[] = [
     generator: fiveDivideThreeGenerator,
     validate: checkAnswer,
     reinforcementSupported: true
+  },
+  {
+    meta: {
+      id: MODULE_SIGNED_ADD_SUB,
+      title: '正负运算',
+      subtitle: '两位数加减',
+      description: '例如 (-37) + 25、18 - (-42)，两位数整数加减，不含两个正数直接相加',
+      enabled: true,
+      diagnosisSupported: false,
+      aiSupported: false
+    },
+    generator: signedAddSubGenerator,
+    validate: checkSignedAnswer,
+    reinforcementSupported: false
   }
 ]
 
