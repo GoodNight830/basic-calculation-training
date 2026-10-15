@@ -108,17 +108,6 @@ function onDragEnd(): void {
   dragIndex.value = null
 }
 
-/* ---- 移动端上下移动 ---- */
-function move(index: number, delta: number): void {
-  const target = index + delta
-  if (target < 0 || target >= categories.value.length) return
-  const list = [...categories.value]
-  const [moved] = list.splice(index, 1)
-  list.splice(target, 0, moved)
-  categories.value = list
-  persistOrder()
-}
-
 /* ---- 移动端长按拖拽排序（touch） ---- */
 const LONG_PRESS_MS = 450
 const MOVE_THRESHOLD = 10
