@@ -283,7 +283,7 @@ onBeforeRouteLeave(() => {
         <div v-if="trainingStore.answeredCount > 0" class="text-xs text-muted">
           已答对 {{ trainingStore.correctCount }} 题 / 已作答 {{ trainingStore.answeredCount }} 题
           <template v-if="feedback && !feedback.correct && awaitingContinue">
-            · 正确答案 {{ formatNumber(feedback.correctAnswer) }}
+            · 正确答案 {{ correctAnswerLabel }}
           </template>
         </div>
       </div>
