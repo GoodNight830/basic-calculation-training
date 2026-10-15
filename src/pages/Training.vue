@@ -222,7 +222,7 @@ onBeforeRouteLeave(() => {
         </div>
 
         <div v-if="question" class="training-question">
-          {{ question.dividend }} ÷ {{ question.divisor }} =
+          {{ question.text }} =
         </div>
         <div v-else class="text-muted">正在准备题目…</div>
 
