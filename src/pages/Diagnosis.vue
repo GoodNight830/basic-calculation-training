@@ -256,6 +256,32 @@ onMounted(() => void reload())
           <button v-else class="btn btn-outline" type="button" @click="router.push({ name: 'settings', hash: '#ai-settings' })">配置 AI 服务</button>
         </div>
       </section>
+
+      <section v-if="aiHistory.length" class="section">
+        <div class="row-between"><h2 class="section-title" style="margin:0">历史报告</h2><span class="text-xs text-muted">共 {{ aiHistory.length }} 份，点击展开查看</span></div>
+        <div class="list" style="margin-top:12px">
+          <div v-for="snapshot in aiHistory" :key="snapshot.id" class="list-item" style="align-items:flex-start">
+            <button type="button" class="list-item-main card-interactive" style="background:none;border:none;padding:0;cursor:pointer;text-align:left;width:100%" @click="toggleHistory(snapshot.id)">
+              <span class="bold" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span>{{ formatDateTime(snapshot.createdAt) }}</span>
+                <span v-if="snapshot.id === latestAi?.id" class="badge">最新</span>
+                <span class="badge badge-muted">{{ snapshot.model }}</span>
+              </span>
+              <span class="text-sm text-muted" style="display:block;margin-top:2px">{{ snapshot.questionCount }} 题 · {{ formatAiReportText(snapshot.report.summary).slice(0, 60) }}{{ formatAiReportText(snapshot.report.summary).length > 60 ? '…' : '' }}</span>
+            </button>
+            <div v-if="expandedHistoryId === snapshot.id" class="text-sm" style="margin-top:8px;padding-left:4px">
+              <div v-for="(finding, index) in snapshot.report.findings" :key="index" style="margin-top:6px">
+                <span class="bold">{{ formatAiReportText(finding.title) }}</span>
+                <span class="text-muted"> · {{ formatAiReportText(finding.evidence) }}</span>
+              </div>
+              <div v-if="snapshot.report.nextPlan.length" class="text-xs text-muted" style="margin-top:8px">
+                计划：{{ snapshot.report.nextPlan.map((a) => formatAiReportText(a.action)).join('；') }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </template>
+
   </div>
 </template>
