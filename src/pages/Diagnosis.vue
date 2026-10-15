@@ -111,7 +111,7 @@ onMounted(() => {
           </div>
           <div v-else class="alert alert-info" style="margin-top:12px">各范围的近期样本尚不足，系统暂不判断薄弱范围。</div>
           <p v-if="improvedRanges.length" class="text-sm text-success">已有 {{ improvedRanges.length }} 个范围呈改善趋势，历史数据仍会保留用于持续验证。</p>
-        </template>
+        </div>
       </section>
 
       <!-- AI 解读入口 -->
