@@ -9,7 +9,7 @@ import { formatAiReportText, requestAiReport, PROMPT_VERSION } from '@/services/
 import { saveAiAnalysis } from '@/db/aiAnalysisSnapshots'
 import { scheduleHostSync } from '@/services/hostSync'
 import { newId } from '@/utils/id'
-import { formatMs, formatPercent, formatDateTime } from '@/services/format'
+import { formatPercent, formatDateTime } from '@/services/format'
 import type {
   AiAnalysisSnapshot,
   AiTrainingAction,
