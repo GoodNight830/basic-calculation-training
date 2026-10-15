@@ -148,7 +148,23 @@ const pressToggleSign = (): void => guarded(() => emit('toggleSign'))
       </button>
     </template>
 
-    <!-- 最后一行：小数点 / 0 / 确认 -->
+    <!-- 最后一行：正负号(可选) / 小数点 / 0 / 确认 -->
+    <button
+      v-if="props.allowNegative"
+      type="button"
+      class="keypad-key"
+      :class="{ 'is-pressed': pressedKey === 'sign' }"
+      :disabled="props.disabled"
+      aria-label="正负号切换"
+      title="切换正负号"
+      @mousedown.prevent
+      @pointerdown="beginPress('sign')"
+      @pointerup="endPress"
+      @pointercancel="endPress"
+      @click="pressToggleSign"
+    >
+      +/−
+    </button>
     <button
       type="button"
       class="keypad-key"
