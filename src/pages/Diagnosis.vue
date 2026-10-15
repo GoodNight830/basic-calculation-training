@@ -214,8 +214,10 @@ onMounted(() => void reload())
       <section class="section card">
         <div class="row-between"><div><h2 class="card-title">AI 解读</h2><p class="card-subtitle">仅发送页面所示聚合数据，不发送逐题答案</p></div><span v-if="latestAi" class="badge">{{ latestAi.model }}</span></div>
         <template v-if="latestAi">
-          <p>{{ formatAiReportText(latestAi.report.summary) }}</p>
+          <p class="bold" style="margin:0">{{ formatAiReportText(latestAi.report.summary) }}</p>
+          <button type="button" class="btn btn-outline btn-sm" style="margin-top:10px" @click="aiDetailExpanded = !aiDetailExpanded">{{ aiDetailExpanded ? '收起详情 ▴' : '查看详情 ▾' }}</button>
 
+          <template v-if="aiDetailExpanded">
           <div class="list">
             <div v-for="(finding, index) in latestAi.report.findings" :key="index" class="list-item">
               <div class="bold">{{ formatAiReportText(finding.title) }}</div>
