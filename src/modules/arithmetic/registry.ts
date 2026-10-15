@@ -7,9 +7,11 @@
 
 import { fiveDivideThreeGenerator } from './five-divide-three/generator'
 import { checkAnswer } from './five-divide-three/validator'
+import { signedAddSubGenerator } from './signed-add-sub/generator'
+import { checkAnswer as checkSignedAnswer } from './signed-add-sub/validator'
 import type { AnswerCheck } from './five-divide-three/types'
 import type { ModuleMeta, QuestionGenerator } from './types'
-import { MODULE_FIVE_DIVIDE_THREE, QUESTION_COUNT } from '@/config/trainingConfig'
+import { MODULE_FIVE_DIVIDE_THREE, MODULE_SIGNED_ADD_SUB, QUESTION_COUNT } from '@/config/trainingConfig'
 
 export interface ArithmeticModule {
   meta: ModuleMeta
