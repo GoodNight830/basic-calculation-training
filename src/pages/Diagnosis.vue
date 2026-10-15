@@ -88,11 +88,11 @@ onMounted(() => {
     </EmptyState>
     <template v-else>
       <section class="section">
-        <button type="button" class="row-between card-interactive" style="background:none;border:none;padding:0;cursor:pointer;width:100%" @click="focusExpanded = !focusExpanded">
-          <h2 class="section-title" style="margin:0">薄弱范围</h2>
-          <span class="text-xs text-muted">{{ focusExpanded ? '收起 ▴' : '查看 ▾' }}</span>
+        <button type="button" class="collapse-header" @click="focusExpanded = !focusExpanded">
+          <span class="collapse-title">薄弱范围</span>
+          <span class="collapse-meta"><span class="collapse-chevron" :class="{ open: focusExpanded }" style="display:inline-block" /></span>
         </button>
-        <template v-if="focusExpanded">
+        <div v-if="focusExpanded" class="collapse-content">
           <p class="text-xs text-muted" style="margin-top:8px">最近7天样本至少10题才下结论</p>
           <div v-if="focusRanges.length" class="list" style="margin-top:12px">
             <div v-for="range in focusRanges" :key="range.rangeMin" class="list-item">
