@@ -4,9 +4,9 @@ import type { QuestionGenerator } from '../types'
 
 export type { QuestionGenerator }
 
-/** 操作数范围：-99 ~ 99 的整数，且不为 0（避免 +0/-0 歧义题） */
-export const OPERAND_MIN = -99
-export const OPERAND_MAX = 99
+/** 操作数绝对值的范围：1 ~ 99（不含 0，避免 +0/-0 歧义题） */
+export const ABS_MIN = 1
+export const ABS_MAX = 99
 
 /** 运算符 */
 export type SignedOperator = '+' | '-'
