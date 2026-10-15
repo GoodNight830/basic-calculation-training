@@ -10,6 +10,8 @@ import type { TrainingMode } from '@/types'
 
 /** 训练模块标识 */
 export const MODULE_FIVE_DIVIDE_THREE = 'five-divide-three'
+/** 正负运算模块标识（两位数加减，含正负数；不参与 AI/诊断/薄弱点分析） */
+export const MODULE_SIGNED_ADD_SUB = 'signed-add-sub'
 
 /** 题目数量限制（规格书 §7.2 建议 V1 上限 100） */
 export const QUESTION_COUNT = {
