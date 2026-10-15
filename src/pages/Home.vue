@@ -283,6 +283,6 @@ onMounted(async () => {
       <div v-else class="alert alert-info">完成一组训练后，这里会显示今日训练情况。</div>
     </section>
 
-    <p class="text-xs text-muted">长按卡片拖拽（移动端）或直接拖动（桌面）调整顺序，也可使用 ↑↓ · 本地优先，训练数据仅保存在本机</p>
+    <p class="text-xs text-muted">长按卡片拖拽（移动端）或直接拖动（桌面）调整顺序 · 本地优先，训练数据仅保存在本机</p>
   </div>
 </template>
