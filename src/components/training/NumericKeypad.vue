@@ -25,8 +25,10 @@ const props = withDefaults(
     disabled?: boolean
     /** 是否显示「确认」按键（反馈展示期间隐藏） */
     showSubmit?: boolean
+    /** 是否显示正负号切换键（正负运算模块） */
+    allowNegative?: boolean
   }>(),
-  { disabled: false, showSubmit: true }
+  { disabled: false, showSubmit: true, allowNegative: false }
 )
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ const emit = defineEmits<{
   (event: 'clear'): void
   (event: 'restart'): void
   (event: 'submit'): void
+  (event: 'toggleSign'): void
 }>()
 
 const DIGIT_ROWS = [
