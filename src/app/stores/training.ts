@@ -207,7 +207,10 @@ export const useTrainingStore = defineStore('training', () => {
       feedback.value = null
       awaitingContinue.value = false
       liveElapsedMs.value = 0
-      await useWeakPatternStore().refresh(session.module)
+      // 不支持薄弱点强化的模块（如正负运算）不触发薄弱点重算
+      if (getArithmeticModule(session.module).reinforcementSupported) {
+        await useWeakPatternStore().refresh(session.module)
+      }
       return session
     } finally {
       busy.value = false
