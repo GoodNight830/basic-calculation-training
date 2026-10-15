@@ -91,6 +91,11 @@ async function startWrongReview(): Promise<void> {
   }
 }
 
+/** 跳转到 AI 解读页，并自动选中当前模块（五除三） */
+function goAi(): void {
+  void router.push({ name: 'ai', query: { module: MODULE_FIVE_DIVIDE_THREE } })
+}
+
 onMounted(load)
 </script>
 
