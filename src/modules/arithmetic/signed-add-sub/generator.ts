@@ -14,7 +14,7 @@
 import { createSeededRng, randomInt, type Rng } from '../random'
 import type { GenerateOptions, GeneratedQuestion, QuestionGenerator } from '../types'
 import { buildQuestionText, computeResult } from './calculator'
-import { OPERAND_MIN, OPERAND_MAX, type SignedOperator } from './types'
+import { ABS_MIN, ABS_MAX, type SignedOperator } from './types'
 import { MODULE_SIGNED_ADD_SUB } from '@/config/trainingConfig'
 import { newId } from '@/utils/id'
 
