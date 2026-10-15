@@ -52,6 +52,11 @@ function toggleHistory(id: string): void {
   expandedHistoryId.value = expandedHistoryId.value === id ? null : id
 }
 
+/* ---- 折叠状态：默认只展示核心结论，细节按需展开（手机端省空间） ---- */
+const aiDetailExpanded = ref(false)
+const focusExpanded = ref(false)
+const historyExpanded = ref(false)
+
 function confidenceLabel(value: DiagnosisRange['confidence']): string {
   return { insufficient: '数据不足', low: '低', medium: '中', high: '高' }[value]
 }
